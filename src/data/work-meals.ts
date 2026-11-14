@@ -1,0 +1,208 @@
+import type { Category, Ingredient } from '@/domain/types';
+import type { WorkMeal } from '@/domain/workbox';
+
+function ing(name: string, qty: number, unit: string, category: Category): Ingredient {
+  return { name, qty, unit, category };
+}
+
+const BREAD = ing('خبز', 1, 'رغيف', 'bakery');
+
+/**
+ * Starter ideas for a packed day at work, one serving each. A starting point to edit:
+ * the eater's own avoid list decides which of these are offered, and no prices are included.
+ */
+export const WORK_MEALS: readonly WorkMeal[] = [
+  {
+    id: 'wk-chicken-yogurt',
+    name: 'دجاج مشوي مفتّت بالزبادي والخيار',
+    slots: ['breakfast', 'lunch'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('صدور دجاج', 120, 'جم', 'protein'), ing('زبادي', 1, 'علبة', 'dairy'), ing('خيار', 1, 'حبة', 'produce'), BREAD],
+  },
+  {
+    id: 'wk-egg-areesh',
+    name: 'بيض مسلوق بجبنة قريش وزعتر',
+    slots: ['breakfast'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('بيض', 2, 'حبة', 'dairy'), ing('جبنة قريش', 80, 'جم', 'dairy'), ing('زعتر', 5, 'جم', 'pantry'), ing('زيت زيتون', 10, 'مل', 'pantry'), BREAD],
+  },
+  {
+    id: 'wk-tuna-lemon',
+    name: 'تونة بالليمون والخيار والجزر',
+    slots: ['breakfast', 'lunch'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['gluten'],
+    ingredients: [ing('تونة', 1, 'علبة', 'pantry'), ing('ليمون', 1, 'حبة', 'produce'), ing('خيار', 1, 'حبة', 'produce'), ing('جزر', 1, 'حبة', 'produce'), BREAD],
+  },
+  {
+    id: 'wk-labneh-zaatar',
+    name: 'لبنة وزعتر وخيار وزيتون',
+    slots: ['breakfast'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('لبنة', 80, 'جم', 'dairy'), ing('زعتر', 5, 'جم', 'pantry'), ing('خيار', 1, 'حبة', 'produce'), ing('زيتون', 30, 'جم', 'pantry'), BREAD],
+  },
+  {
+    id: 'wk-halloumi',
+    name: 'حلوم مشوي بطماطم وخيار',
+    slots: ['breakfast', 'lunch'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('جبنة حلوم', 80, 'جم', 'dairy'), ing('طماطم', 1, 'حبة', 'produce'), ing('خيار', 1, 'حبة', 'produce'), BREAD],
+  },
+  {
+    id: 'wk-kofta-tahini',
+    name: 'كفتة فرن بالبقدونس والطحينة',
+    slots: ['lunch'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['gluten'],
+    ingredients: [ing('لحم مفروم', 120, 'جم', 'protein'), ing('بقدونس', 1, 'حزمة', 'produce'), ing('طحينة', 20, 'جم', 'pantry'), BREAD],
+  },
+  {
+    id: 'wk-omelette-spinach',
+    name: 'عجة بيض بالبقدونس والسبانخ',
+    slots: ['breakfast'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['gluten'],
+    ingredients: [ing('بيض', 2, 'حبة', 'dairy'), ing('سبانخ', 50, 'جم', 'produce'), ing('بقدونس', 1, 'حزمة', 'produce'), BREAD],
+  },
+  {
+    id: 'wk-pasta-tuna-cold',
+    name: 'سلطة مكرونة باردة بالتونة والخيار والزيتون',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: false,
+    tags: ['gluten'],
+    ingredients: [ing('مكرونة', 100, 'جم', 'pantry'), ing('تونة', 1, 'علبة', 'pantry'), ing('خيار', 1, 'حبة', 'produce'), ing('زيتون', 30, 'جم', 'pantry'), ing('ليمون', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-sweet-potato-egg',
+    name: 'بطاطا مشوية وبيض مسلوق وجبنة قريش',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: false,
+    tags: ['dairy'],
+    ingredients: [ing('بطاطا', 1, 'حبة', 'produce'), ing('بيض', 2, 'حبة', 'dairy'), ing('جبنة قريش', 80, 'جم', 'dairy')],
+  },
+  {
+    id: 'wk-bulgur-chicken',
+    name: 'برغل بالدجاج والجزر (يتاكل بارد)',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: false,
+    tags: ['gluten'],
+    ingredients: [ing('برغل', 80, 'جم', 'pantry'), ing('صدور دجاج', 120, 'جم', 'protein'), ing('جزر', 1, 'حبة', 'produce'), ing('ليمون', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-chicken-salad-potato',
+    name: 'سلطة بطاطس بالدجاج والزبادي',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: false,
+    tags: ['dairy'],
+    ingredients: [ing('بطاطس', 2, 'حبة', 'produce'), ing('صدور دجاج', 120, 'جم', 'protein'), ing('زبادي', 1, 'علبة', 'dairy'), ing('خيار', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-rice-chicken-hot',
+    name: 'أرز بسمتي ودجاج مشوي وكوسة وجزر',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: true,
+    tags: [],
+    ingredients: [ing('أرز', 100, 'جم', 'pantry'), ing('صدور دجاج', 150, 'جم', 'protein'), ing('كوسة', 1, 'حبة', 'produce'), ing('جزر', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-fish-rice-hot',
+    name: 'سمك فيليه فرن وأرز وسلطة',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: true,
+    tags: [],
+    ingredients: [ing('سمك فيليه', 150, 'جم', 'protein'), ing('أرز', 100, 'جم', 'pantry'), ing('خيار', 1, 'حبة', 'produce'), ing('طماطم', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-tuna-onion-pepper',
+    name: 'سلطة تونة بالبصل والفلفل الرومي',
+    slots: ['lunch'],
+    kind: 'box',
+    needsHeat: false,
+    tags: [],
+    ingredients: [ing('تونة', 1, 'علبة', 'pantry'), ing('بصل', 1, 'حبة', 'produce'), ing('فلفل رومي', 1, 'حبة', 'produce'), ing('ليمون', 1, 'حبة', 'produce')],
+  },
+  {
+    id: 'wk-foul',
+    name: 'ساندوتش فول',
+    slots: ['breakfast'],
+    kind: 'sandwich',
+    needsHeat: false,
+    tags: ['legumes', 'gluten'],
+    ingredients: [ing('فول مدمس', 1, 'علبة', 'pantry'), BREAD],
+  },
+  {
+    id: 'wk-oats-yogurt',
+    name: 'شوفان منقوع بالزبادي والموز والعسل',
+    slots: ['breakfast'],
+    kind: 'jar',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('شوفان', 50, 'جم', 'pantry'), ing('زبادي', 1, 'علبة', 'dairy'), ing('موز', 1, 'حبة', 'produce'), ing('عسل', 10, 'جم', 'pantry')],
+  },
+  {
+    id: 'wk-oats-milk',
+    name: 'شوفان بالحليب والتمر',
+    slots: ['breakfast'],
+    kind: 'jar',
+    needsHeat: false,
+    tags: ['dairy', 'gluten'],
+    ingredients: [ing('شوفان', 50, 'جم', 'pantry'), ing('حليب', 200, 'مل', 'dairy'), ing('تمر', 3, 'حبة', 'pantry')],
+  },
+  {
+    id: 'wk-yogurt-dates-nuts',
+    name: 'زبادي بالتمر والمكسرات',
+    slots: ['breakfast', 'snack'],
+    kind: 'jar',
+    needsHeat: false,
+    tags: ['dairy'],
+    ingredients: [ing('زبادي', 1, 'علبة', 'dairy'), ing('تمر', 3, 'حبة', 'pantry'), ing('مكسرات نيئة', 20, 'جم', 'pantry')],
+  },
+  {
+    id: 'wk-banana-nuts',
+    name: 'موز وحفنة مكسرات',
+    slots: ['snack'],
+    kind: 'snack',
+    needsHeat: false,
+    tags: [],
+    ingredients: [ing('موز', 1, 'حبة', 'produce'), ing('مكسرات نيئة', 20, 'جم', 'pantry')],
+  },
+  {
+    id: 'wk-dates-yogurt',
+    name: 'تمر وزبادي',
+    slots: ['snack'],
+    kind: 'snack',
+    needsHeat: false,
+    tags: ['dairy'],
+    ingredients: [ing('تمر', 4, 'حبة', 'pantry'), ing('زبادي', 1, 'علبة', 'dairy')],
+  },
+  {
+    id: 'wk-veg-sticks-egg',
+    name: 'خيار وجزر وبيضة مسلوقة',
+    slots: ['snack'],
+    kind: 'snack',
+    needsHeat: false,
+    tags: [],
+    ingredients: [ing('خيار', 1, 'حبة', 'produce'), ing('جزر', 1, 'حبة', 'produce'), ing('بيض', 1, 'حبة', 'dairy')],
+  },
+];
+
+export function workMealById(id: string): WorkMeal | undefined {
+  return WORK_MEALS.find((meal) => meal.id === id);
+}
