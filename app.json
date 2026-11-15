@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "بيتنا",
-    "slug": "baytna",
+    "slug": "ahmed-ezzat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -48,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "01fa3b67-e98f-43a3-baf6-6ded72bb769f"
+      }
+    },
+    "owner": "ahmedelashrys-team"
   }
 }
