@@ -82,19 +82,23 @@ type IconButtonProps = {
   label: string;
   onPress: () => void;
   tone?: 'plain' | 'danger';
+  /** For an on/off choice such as a rating: the chosen one takes the brand colour. */
+  selected?: boolean;
 };
 
 /** A round, icon-only action for secondary things: share, delete, open. */
-export function IconButton({ icon, label, onPress, tone = 'plain' }: IconButtonProps) {
+export function IconButton({ icon, label, onPress, tone = 'plain', selected }: IconButtonProps) {
   const styles = useStyles();
   const palette = usePalette();
+  const plain = selected === true ? palette.brand : palette.muted;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={selected === undefined ? undefined : { selected }}
       onPress={onPress}
       style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}>
-      <Icon name={icon} color={tone === 'danger' ? palette.over : palette.muted} size={ICON_BUTTON_GLYPH} />
+      <Icon name={icon} color={tone === 'danger' ? palette.over : plain} size={ICON_BUTTON_GLYPH} />
     </Pressable>
   );
 }

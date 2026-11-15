@@ -1,4 +1,5 @@
 import { lookupPrice, normalizeName } from './budget';
+import { rankByTaste, type Ratings } from './taste';
 import type { Ingredient, ListItem, Meal, MealSlot, MealStyle, Member, PlanEntry, PriceBook, Protein } from './types';
 import { SLOTS } from './types';
 
@@ -70,6 +71,8 @@ export interface PlanOptions {
   readonly locked?: readonly PlannedSlot[];
   /** Favourite meals come up first in the rotation. */
   readonly favorites?: ReadonlySet<string>;
+  /** What the family thought after eating: liked meals come up sooner, disliked ones last. */
+  readonly ratings?: Ratings;
   /** The style wanted for each day's lunch, by day index. A wish, not a rule: protein comes first. */
   readonly styles?: readonly MealStyle[];
 }
@@ -136,7 +139,7 @@ export function generateWeekPlan(
   const used = new Map<MealSlot, number>();
   const plan: PlannedSlot[] = [];
   const favorites = options.favorites ?? new Set<string>();
-  const ordered = [...meals].sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)));
+  const ordered = rankByTaste(meals, favorites, options.ratings ?? {});
 
   days.forEach((date, dayIndex) => {
     const kept = (options.locked ?? []).filter((slot) => slot.date === date);

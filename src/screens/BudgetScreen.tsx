@@ -6,7 +6,7 @@ import { Button, IconButton, Row, Tile, Txt, type IconName } from '@/components/
 import { Radius, RowDir, Spacing, themed } from '@/constants/theme';
 import { formatSar, spendByCategory, summarizeBudget, type BudgetStatus } from '@/domain/budget';
 import { weeklySetAside } from '@/domain/funds';
-import { entryFor } from '@/domain/meals';
+import { entryFor, LEFTOVERS_ID } from '@/domain/meals';
 import { summarizePantry } from '@/domain/pantry';
 import { bestOffer, isActive } from '@/domain/offers';
 import { CATEGORY_LABELS, SLOT_LABELS, SLOTS } from '@/domain/types';
@@ -23,6 +23,8 @@ const STATUS_LINES: Record<BudgetStatus, string> = {
 };
 
 const SETTINGS_ICON: IconName = { ios: 'gearshape', android: 'settings', web: 'settings' };
+const LIKE_ICON: IconName = { ios: 'hand.thumbsup', android: 'thumb_up', web: 'thumb_up' };
+const DISLIKE_ICON: IconName = { ios: 'hand.thumbsdown', android: 'thumb_down', web: 'thumb_down' };
 const TOP_OFFERS = 3;
 const BAR_HEIGHT = 8;
 
@@ -44,6 +46,8 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
   const workBudget = useStore((state) => state.workBudget);
   const funds = useStore((state) => state.funds);
   const fruitBudget = useStore((state) => state.fruitBudget);
+  const ratings = useStore((state) => state.ratings);
+  const rateMeal = useStore((state) => state.rateMeal);
   const pantry = summarizePantry(useStore((state) => state.staples));
   const styles = useStyles();
 
@@ -60,7 +64,7 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
   const fruitSpent = shares.find((entry) => entry.category === 'fruit')?.amount ?? 0;
   const todayMeals = SLOTS.map((slot) => {
     const entry = entryFor(plan, today, slot);
-    return { slot, name: entry ? findMeal(entry.mealId, customMeals)?.name : undefined };
+    return { slot, mealId: entry?.mealId, name: entry ? findMeal(entry.mealId, customMeals)?.name : undefined };
   });
   const hasMeals = todayMeals.some((meal) => meal.name !== undefined);
   const activeOffers = offers.filter((offer) => isActive(offer, today));
@@ -163,14 +167,33 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
       <Tile>
         <Txt kind="title">أكل النهارده</Txt>
         {hasMeals ? (
-          todayMeals.map(({ slot, name }) => (
-            <Row key={slot}>
-              <Txt kind="label">{SLOT_LABELS[slot]}</Txt>
-              <Txt kind="strong" style={styles.grow}>
-                {name ?? 'لسه ما اتحددش'}
-              </Txt>
-            </Row>
-          ))
+          <>
+            {todayMeals.map(({ slot, name, mealId }) => (
+              <Row key={slot}>
+                <Txt kind="label">{SLOT_LABELS[slot]}</Txt>
+                <Txt kind="strong" style={styles.grow}>
+                  {name ?? 'لسه ما اتحددش'}
+                </Txt>
+                {name !== undefined && mealId !== undefined && mealId !== LEFTOVERS_ID && (
+                  <>
+                    <IconButton
+                      icon={LIKE_ICON}
+                      label={`${name} عجبتنا`}
+                      selected={ratings[mealId] === 'liked'}
+                      onPress={() => rateMeal(mealId, 'liked')}
+                    />
+                    <IconButton
+                      icon={DISLIKE_ICON}
+                      label={`${name} ما عجبتناش`}
+                      selected={ratings[mealId] === 'disliked'}
+                      onPress={() => rateMeal(mealId, 'disliked')}
+                    />
+                  </>
+                )}
+              </Row>
+            ))}
+            <Txt kind="label">قيّم بعد الأكل: اللي عجبكم ييجي أكتر في الخطة الجاية، واللي ما عجبكمش ييجي في الآخر.</Txt>
+          </>
         ) : (
           <>
             <Txt>لسه مفيش خطة للأسبوع ده.</Txt>

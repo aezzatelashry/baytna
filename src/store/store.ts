@@ -3,7 +3,9 @@ import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { DESSERTS } from '@/data/desserts';
 import { withMeta } from '@/data/meal-meta';
+import { nextSweet, pickWeekSweet, rate, type Ratings, type Verdict } from '@/domain/taste';
 import { mealById, SEED_MEALS } from '@/data/seed-meals';
 import { MAX_NOTES, type AssistantAction } from '@/domain/assistant';
 import { lookupPrice, normalizeName, recordPrice } from '@/domain/budget';
@@ -40,6 +42,7 @@ import {
 import { WORK_MEALS } from '@/data/work-meals';
 
 export const DEFAULT_WEEKLY_BUDGET = 500;
+const SWEET_IDS = DESSERTS.map((dessert) => dessert.id);
 const SATURDAY = 6;
 
 export interface NewItem {
@@ -126,6 +129,10 @@ interface State {
   readonly leftoversDay: number | null;
   /** Extra people eating with the family this week. Scales what a meal puts on the list. */
   readonly guests: GuestWeek | null;
+  /** What the family thought of each meal after eating it. Steers the next plan. */
+  readonly ratings: Ratings;
+  /** Each week's sweet, as a dessert id keyed by the week's first day. */
+  readonly weekSweets: Readonly<Record<string, string>>;
   readonly household: HouseholdLink | null;
   readonly lastPushedAt: string;
   readonly lastPulledAt: string;
@@ -198,6 +205,10 @@ interface Actions {
   setLeftoversDay: (dayIndex: number | null) => void;
   /** Sets how many guests eat with the family this week. Zero clears it. */
   setGuests: (count: number) => void;
+  /** Records what the family thought of a meal. The same verdict twice takes it back. */
+  rateMeal: (mealId: string, verdict: Verdict) => void;
+  /** Swaps this week's sweet for the next one in the library. */
+  nextWeekSweet: () => void;
   togglePlanLock: (date: string, slot: MealSlot) => void;
   /** Trades the meal in this slot with the same slot on another day. */
   moveMeal: (date: string, slot: MealSlot, toDate: string) => void;
@@ -291,6 +302,8 @@ export const useStore = create<Store>()(
       planOffset: 0,
       leftoversDay: null,
       guests: null,
+      ratings: {},
+      weekSweets: {},
       household: null,
       lastPushedAt: '',
       lastPulledAt: '',
@@ -558,13 +571,23 @@ export const useStore = create<Store>()(
           const fresh = generateWeekPlan(allMeals(state.customMeals), days, state.planOffset, {
             locked: held,
             favorites: new Set(state.favorites),
+            ratings: state.ratings,
             styles: styleSequence(state.rhythm, days.length),
           })
             .filter((slot) => !locked.some((kept) => kept.date === slot.date && kept.slot === slot.slot))
             .map((slot) => ({ ...slot, id: Crypto.randomUUID(), updatedAt: stamp, deleted: false }));
-          return { plan: [...retired, ...fresh], planOffset: state.planOffset + 1 };
+          const sweet = pickWeekSweet(SWEET_IDS, state.planOffset);
+          const weekSweets = sweet === null ? state.weekSweets : { ...state.weekSweets, [days[0]]: sweet };
+          return { plan: [...retired, ...fresh], planOffset: state.planOffset + 1, weekSweets };
         }),
 
+      rateMeal: (mealId, verdict) => set((state) => ({ ratings: rate(state.ratings, mealId, verdict) })),
+      nextWeekSweet: () =>
+        set((state) => {
+          const weekStart = currentWeekStart(state.weekStartsOn);
+          const next = nextSweet(SWEET_IDS, state.weekSweets[weekStart] ?? null);
+          return next === null ? state : { weekSweets: { ...state.weekSweets, [weekStart]: next } };
+        }),
       setLeftoversDay: (leftoversDay) => set({ leftoversDay }),
       setGuests: (count) =>
         set((state) => ({ guests: count > 0 ? { weekStart: currentWeekStart(state.weekStartsOn), count } : null })),

@@ -24,6 +24,7 @@ const LOCK_ICON: IconName = { ios: 'lock.fill', android: 'lock', web: 'lock' };
 const STAR_ICON: IconName = { ios: 'star.fill', android: 'star', web: 'star' };
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
 const EDIT_ICON: IconName = { ios: 'pencil', android: 'edit', web: 'edit' };
+const SWAP_ICON: IconName = { ios: 'arrow.triangle.2.circlepath', android: 'autorenew', web: 'autorenew' };
 const DAY_HEIGHT = 64;
 const THUMB_SIZE = 56;
 const BADGE_SIZE = 18;
@@ -157,7 +158,11 @@ function OurMeals() {
 /** Home sweets and fruit dishes: pick one and its ingredients go on the list, inside the same budget. */
 function Sweets() {
   const addIngredientsToList = useStore((state) => state.addIngredientsToList);
+  const nextWeekSweet = useStore((state) => state.nextWeekSweet);
+  const sweetId = useStore((state) => state.weekSweets[currentWeekStart(state.weekStartsOn)]);
   const styles = useStyles();
+  // Chosen when the week's plan is made; absent until then.
+  const weekSweet = DESSERTS.find((dessert) => dessert.id === sweetId);
 
   const handleAdd = (dessert: Dessert): void => {
     const added = addIngredientsToList(dessert.ingredients);
@@ -168,6 +173,16 @@ function Sweets() {
     <Tile>
       <Txt kind="title">حلو وفاكهة</Txt>
       <Txt>حلويات بيت بسيطة وطرق تستخدم بيها الفاكهة قبل ما تبوظ. مكوناتها بتتحسب من ميزانية الأسبوع.</Txt>
+      {weekSweet !== undefined && (
+        <View style={styles.slot}>
+          <View style={styles.grow}>
+            <Txt kind="label">حلو الأسبوع ده</Txt>
+            <Txt kind="strong">{weekSweet.name}</Txt>
+          </View>
+          <IconButton icon={SWAP_ICON} label="غيّر حلو الأسبوع" onPress={nextWeekSweet} />
+          <IconButton icon={CART_ICON} label={`أضف مكونات ${weekSweet.name} للقائمة`} onPress={() => handleAdd(weekSweet)} />
+        </View>
+      )}
       {DESSERTS.map((dessert) => (
         <View key={dessert.id} style={styles.slot}>
           <View style={styles.grow}>
