@@ -1,4 +1,6 @@
+import { CATALOG } from '../data/catalog';
 import { normalizeName } from './budget';
+import { sameProduct } from './catalog';
 import { daysBetween } from './pantry';
 import type { Category, Meal } from './types';
 
@@ -69,18 +71,15 @@ export function withShelfDays(item: FreshItem, change: number): FreshItem {
   return { ...item, shelfDays: Math.max(item.shelfDays + change, MIN_SHELF_DAYS) };
 }
 
-function wordsOf(name: string): string[] {
-  return normalizeName(name).split(/\s+/).filter(Boolean);
-}
-
-/** Whole words only, so "لبن" is not mistaken for "لبنة". */
-function sameThing(a: readonly string[], b: readonly string[]): boolean {
-  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return short.length > 0 && short.every((word) => long.includes(word));
-}
-
-/** Meals that would use the item up, in the order given. */
+/** Meals that would use the item up, in the order given. Matched through the dictionary. */
 export function mealsUsing(itemName: string, meals: readonly Meal[]): Meal[] {
-  const wanted = wordsOf(itemName);
-  return meals.filter((meal) => meal.ingredients.some((ingredient) => sameThing(wanted, wordsOf(ingredient.name))));
+  if (itemName.trim() === '') return [];
+  return meals.filter((meal) => meal.ingredients.some((ingredient) => sameProduct(itemName, ingredient.name, CATALOG)));
+}
+
+/** Puts the meals that use up something about to go off ahead of the rest, keeping each group's order. */
+export function rescueFirst(meals: readonly Meal[], expiring: readonly string[]): Meal[] {
+  if (expiring.length === 0) return [...meals];
+  const rescuers = new Set(expiring.flatMap((name) => mealsUsing(name, meals)).map((meal) => meal.id));
+  return [...meals.filter((meal) => rescuers.has(meal.id)), ...meals.filter((meal) => !rescuers.has(meal.id))];
 }

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { View } from 'react-native';
 
 import { BudgetRing } from '@/components/BudgetRing';
@@ -28,6 +29,7 @@ const LIKE_ICON: IconName = { ios: 'hand.thumbsup', android: 'thumb_up', web: 't
 const DISLIKE_ICON: IconName = { ios: 'hand.thumbsdown', android: 'thumb_down', web: 'thumb_down' };
 const TOP_OFFERS = 3;
 const BAR_HEIGHT = 8;
+const THUMB_SIZE = 44;
 
 type BudgetScreenProps = {
   onOpenSettings: () => void;
@@ -49,6 +51,7 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
   const fruitBudget = useStore((state) => state.fruitBudget);
   const ratings = useStore((state) => state.ratings);
   const rateMeal = useStore((state) => state.rateMeal);
+  const mealPhotos = useStore((state) => state.mealPhotos);
   const pantry = summarizePantry(useStore((state) => state.staples));
   const styles = useStyles();
 
@@ -172,6 +175,9 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
           <>
             {todayMeals.map(({ slot, name, mealId }) => (
               <Row key={slot}>
+                {mealId !== undefined && mealPhotos[mealId] !== undefined && (
+                  <Image source={{ uri: mealPhotos[mealId] }} accessibilityLabel={`صورة ${name ?? ''}`} contentFit="cover" style={styles.mealThumb} />
+                )}
                 <Txt kind="label">{SLOT_LABELS[slot]}</Txt>
                 <Txt kind="strong" style={styles.grow}>
                   {name ?? 'لسه ما اتحددش'}
@@ -256,4 +262,5 @@ const useStyles = themed((c) => ({
     paddingVertical: Spacing.one,
   },
   priceText: { color: c.accent },
+  mealThumb: { width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: Radius.control },
 }));

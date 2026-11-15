@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
 import Swipeable, { SwipeDirection, type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Button, Chip, Field, Icon, IconButton, Row, Sheet, Tile, Txt, type IconName } from '@/components/kit';
@@ -8,7 +8,9 @@ import { showToast } from '@/components/toast';
 import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
 import { MIN_TOUCH, Radius, RowDir, Rule, Spacing, themed, usePalette } from '@/constants/theme';
-import { formatSar, lookupPrice, parsePrice } from '@/domain/budget';
+import { formatSar, parsePrice } from '@/domain/budget';
+import { knownPrice } from '@/domain/prices';
+import { groupByStore, listMessage } from '@/domain/share-list';
 import { offerForItem, type ItemOffer } from '@/domain/offers';
 import { dayName, toDateKey } from '@/domain/week';
 import { CATEGORIES, CATEGORY_LABELS, type Category, type ListItem } from '@/domain/types';
@@ -24,6 +26,7 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
   const weekStartsOn = useStore((state) => state.weekStartsOn);
   const allItems = useStore((state) => state.items);
   const addItem = useStore((state) => state.addItem);
+  const offers = useStore((state) => state.offers);
 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -39,6 +42,11 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
     rows: items.filter((item) => item.category === key).sort((a, b) => Number(a.bought) - Number(b.bought)),
   })).filter((group) => group.rows.length > 0);
 
+  const toBuy = items.filter((item) => !item.bought).map((item) => item.name);
+  const handleShare = (): void => {
+    const message = listMessage(groupByStore(toBuy, offers, toDateKey(new Date())));
+    void Share.share({ message }).catch(() => undefined);
+  };
   const handleAdd = (): void => {
     if (name.trim() === '') return;
     addItem({ name, qty: 1, unit: '', category, estPrice: parsePrice(price) });
@@ -48,7 +56,12 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
 
   return (
     <View style={styles.screen}>
-      <Txt kind="head">قائمة المشتريات</Txt>
+      <View style={styles.headRow}>
+        <Txt kind="head" style={styles.grow}>
+          قائمة المشتريات
+        </Txt>
+        {toBuy.length > 0 && <IconButton icon={SHARE_ICON} label="شارك القائمة مقسّمة حسب المتجر" onPress={handleShare} />}
+      </View>
       <View accessibilityRole="tablist" style={styles.chips}>
         <Chip label="قائمة الأسبوع" selected={view === 'week'} onPress={() => setView('week')} />
         <Chip label="المخزن" selected={view === 'pantry'} onPress={() => setView('pantry')} />
@@ -134,7 +147,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const swipedAt = useRef(0);
   const [paid, setPaid] = useState(item.estPrice === null ? '' : formatSar(item.estPrice));
 
-  const found = item.bought ? null : offerForItem(item.name, offers, lookupPrice(priceBook, item.name), toDateKey(new Date()));
+  const found = item.bought ? null : offerForItem(item.name, offers, knownPrice(priceBook, item.name), toDateKey(new Date()));
   const quantity = item.unit === '' ? '' : `${item.qty} ${item.unit}`;
   const stateLabel = item.bought ? 'اتشترى' : 'لسه';
   const isMissing = item.notFound === true && !item.bought;
@@ -294,6 +307,7 @@ const BUY_DRAG = SwipeDirection.RIGHT;
 const BUY_PANEL = SwipeDirection.LEFT;
 const SWIPE_PRESS_GUARD_MS = 800;
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
+const SHARE_ICON: IconName = { ios: 'square.and.arrow.up', android: 'share', web: 'share' };
 const CHECK_SIZE = 28;
 const CHECK_ICON_SIZE = 18;
 const PRICE_FIELD_WIDTH = 120;
@@ -301,6 +315,7 @@ const CHECK_ICON: IconName = { ios: 'checkmark', android: 'check', web: 'check' 
 
 const useStyles = themed((c) => ({
   screen: { gap: Spacing.four },
+  headRow: { flexDirection: RowDir, alignItems: 'center' },
   inline: { flexDirection: RowDir, gap: Spacing.two, alignItems: 'flex-end' },
   priceInput: { width: PRICE_FIELD_WIDTH },
   chips: { flexDirection: RowDir, flexWrap: 'wrap', gap: Spacing.two },

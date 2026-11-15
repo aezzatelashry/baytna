@@ -54,6 +54,12 @@
         "projectId": "01fa3b67-e98f-43a3-baf6-6ded72bb769f"
       }
     },
-    "owner": "ahmedelashrys-team"
+    "owner": "ahmedelashrys-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/01fa3b67-e98f-43a3-baf6-6ded72bb769f"
+    }
   }
 }

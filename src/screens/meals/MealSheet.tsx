@@ -9,7 +9,8 @@ import { formatSar } from '@/domain/budget';
 import { entryFor, estimateMealCost, membersExcludedFrom } from '@/domain/meals';
 import { costPerPerson } from '@/domain/thrift';
 import { MEAL_STYLE_LABELS, QUICK_MINUTES, SLOT_LABELS, type MealSlot } from '@/domain/types';
-import { dayName } from '@/domain/week';
+import { mealCostWithOffers } from '@/domain/prices';
+import { dayName, toDateKey } from '@/domain/week';
 import { youtubeThumbnailUrl, youtubeVideoId, youtubeWatchUrl } from '@/domain/youtube';
 import { allMeals, findMeal, useStore } from '@/store/store';
 import { pickMealPhoto, type PhotoSource } from '@/sync/meal-photo';
@@ -35,6 +36,7 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
   const favorites = useStore((state) => state.favorites);
   const mealVideos = useStore((state) => state.mealVideos);
   const priceBook = useStore((state) => state.priceBook);
+  const offers = useStore((state) => state.offers);
   const setPlanMeal = useStore((state) => state.setPlanMeal);
   const togglePlanLock = useStore((state) => state.togglePlanLock);
   const toggleFavorite = useStore((state) => state.toggleFavorite);
@@ -55,6 +57,7 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
   const options = allMeals(customMeals).filter((candidate) => candidate.slots.includes(slot));
   const excluded = membersExcludedFrom(meal, members).map((member) => member.name);
   const cost = estimateMealCost(meal, priceBook);
+  const withOffers = mealCostWithOffers(meal, priceBook, offers, toDateKey(new Date()));
   const videoId = mealVideos[meal.id];
   const photo = mealPhotos[meal.id];
   const isFavorite = favorites.includes(meal.id);
@@ -148,6 +151,11 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
         {cost.known > 0 && cost.unknownCount > 0 ? `، و${cost.unknownCount} مكون من غير سعر` : ''}.
         {cost.known > 0 && perPerson !== null ? ` يعني ${formatSar(perPerson)} ريال للفرد.` : ''}
       </Txt>
+      {withOffers.saving > 0 && (
+        <Txt kind="label" tone="ok">
+          بالعروض المحفوظة النهارده: {formatSar(withOffers.withOffers)} ريال، يعني توفير {formatSar(withOffers.saving)} ريال.
+        </Txt>
+      )}
       <Button label="أضف مكوناتها للقائمة" onPress={handleAddToList} />
 
       <Txt kind="strong">بدّلها بـ</Txt>

@@ -8,7 +8,8 @@ import { withMeta } from '@/data/meal-meta';
 import { nextSweet, pickWeekSweet, rate, type Ratings, type Verdict } from '@/domain/taste';
 import { mealById, SEED_MEALS } from '@/data/seed-meals';
 import { MAX_NOTES, type AssistantAction } from '@/domain/assistant';
-import { lookupPrice, normalizeName, recordPrice } from '@/domain/budget';
+import { normalizeName, recordPrice } from '@/domain/budget';
+import { knownPrice } from '@/domain/prices';
 import { guestFactor, guestsThisWeek, scaleForGuests, type GuestWeek } from '@/domain/guests';
 import {
   DEFAULT_RHYTHM,
@@ -20,7 +21,7 @@ import {
   withLeftoversDay,
   type Rhythm,
 } from '@/domain/meals';
-import { freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
+import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
@@ -272,7 +273,7 @@ function buildItem(input: NewItem, weekStart: string, addedBy: string, book: Pri
     qty: input.qty,
     unit: input.unit,
     category: input.category,
-    estPrice: input.estPrice ?? lookupPrice(book, input.name),
+    estPrice: input.estPrice ?? knownPrice(book, input.name),
     paidPrice: null,
     bought: false,
     mealId: input.mealId ?? null,
@@ -621,6 +622,7 @@ export const useStore = create<Store>()(
             locked: held,
             favorites: new Set(state.favorites),
             ratings: state.ratings,
+            useUp: expiringSoon(state.fresh, toDateKey(new Date())).map((item) => item.name),
             styles: styleSequence(state.rhythm, days.length),
           })
             .filter((slot) => !locked.some((kept) => kept.date === slot.date && kept.slot === slot.slot))

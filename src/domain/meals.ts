@@ -1,4 +1,6 @@
-import { lookupPrice, normalizeName } from './budget';
+import { normalizeName } from './budget';
+import { rescueFirst } from './fresh';
+import { knownPrice } from './prices';
 import { rankByTaste, type Ratings } from './taste';
 import type { Ingredient, ListItem, Meal, MealSlot, MealStyle, Member, PlanEntry, PriceBook, Protein } from './types';
 import { SLOTS } from './types';
@@ -73,6 +75,8 @@ export interface PlanOptions {
   readonly favorites?: ReadonlySet<string>;
   /** What the family thought after eating: liked meals come up sooner, disliked ones last. */
   readonly ratings?: Ratings;
+  /** Fresh things about to go off: meals that use them up come before everything else. */
+  readonly useUp?: readonly string[];
   /** The style wanted for each day's lunch, by day index. A wish, not a rule: protein comes first. */
   readonly styles?: readonly MealStyle[];
 }
@@ -139,7 +143,7 @@ export function generateWeekPlan(
   const used = new Map<MealSlot, number>();
   const plan: PlannedSlot[] = [];
   const favorites = options.favorites ?? new Set<string>();
-  const ordered = rankByTaste(meals, favorites, options.ratings ?? {});
+  const ordered = rescueFirst(rankByTaste(meals, favorites, options.ratings ?? {}), options.useUp ?? []);
 
   days.forEach((date, dayIndex) => {
     const kept = (options.locked ?? []).filter((slot) => slot.date === date);
@@ -187,7 +191,7 @@ export interface MealCost {
 export function estimateMealCost(meal: Meal, book: PriceBook): MealCost {
   return meal.ingredients.reduce<MealCost>(
     (cost, ingredient) => {
-      const price = lookupPrice(book, ingredient.name);
+      const price = knownPrice(book, ingredient.name);
       return price === null
         ? { ...cost, unknownCount: cost.unknownCount + 1 }
         : { ...cost, known: cost.known + price };

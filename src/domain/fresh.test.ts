@@ -6,6 +6,7 @@ import {
   freshDaysLeft,
   freshFromPurchase,
   mealsUsing,
+  rescueFirst,
   withoutPurchase,
   withPurchase,
   withShelfDays,
@@ -86,6 +87,13 @@ describe('fresh shelf', () => {
 
     expect(mealsUsing('طماطم', meals).map((each) => each.id)).toEqual(['سلطة', 'شكشوكة']);
     expect(mealsUsing('  ', meals)).toEqual([]);
+  });
+
+  test('puts the meals that rescue an expiring item first and keeps the rest in order', () => {
+    const meals = [meal('رز', 'أرز'), meal('سلطة', 'طماطم'), meal('عدس', 'عدس'), meal('شكشوكة', 'بندورة')];
+
+    expect(rescueFirst(meals, ['طماطم']).map((each) => each.id)).toEqual(['سلطة', 'شكشوكة', 'رز', 'عدس']);
+    expect(rescueFirst(meals, []).map((each) => each.id)).toEqual(['رز', 'سلطة', 'عدس', 'شكشوكة']);
   });
 
   test('matches whole words, so one food is not mistaken for a longer name', () => {
