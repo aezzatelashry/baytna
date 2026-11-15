@@ -8,7 +8,9 @@ import { showToast } from '@/components/toast';
 import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
 import { MIN_TOUCH, Radius, RowDir, Rule, Spacing, themed, usePalette } from '@/constants/theme';
-import { formatSar, parsePrice } from '@/domain/budget';
+import { formatSar, lookupPrice, parsePrice } from '@/domain/budget';
+import { offerForItem, type ItemOffer } from '@/domain/offers';
+import { dayName, toDateKey } from '@/domain/week';
 import { CATEGORIES, CATEGORY_LABELS, type Category, type ListItem } from '@/domain/types';
 import { currentWeekStart, useStore } from '@/store/store';
 
@@ -105,6 +107,17 @@ function priceLabel(item: ListItem): string {
   return price === null ? 'من غير سعر' : `${formatSar(price)} ريال`;
 }
 
+/** Where to buy it and whether the offer really beats what the family last paid. */
+function offerLine({ offer, verdict, saving }: ItemOffer): string {
+  const pack = offer.packQty > 1 ? ` لـ ${offer.packQty} حبة` : '';
+  const until = offer.validUntil === null ? '' : `، لحد ${dayName(offer.validUntil)}`;
+  const base = `عرض ${offer.store}: ${formatSar(offer.price)} ريال${pack}${until}`;
+  if (verdict === 'cheaper' && saving !== null) return `${base}. أرخص من آخر سعر دفعتوه بـ ${formatSar(saving)} ريال.`;
+  if (verdict === 'dearer' && saving !== null) return `${base}. أغلى من آخر سعر دفعتوه بـ ${formatSar(-saving)} ريال.`;
+  if (verdict === 'same') return `${base}. نفس آخر سعر دفعتوه.`;
+  return `${base}.`;
+}
+
 function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const setBought = useStore((state) => state.setBought);
   const setEstPrice = useStore((state) => state.setEstPrice);
@@ -112,6 +125,8 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const restoreItem = useStore((state) => state.restoreItem);
   const markNotFound = useStore((state) => state.markNotFound);
   const clearNotFound = useStore((state) => state.clearNotFound);
+  const offers = useStore((state) => state.offers);
+  const priceBook = useStore((state) => state.priceBook);
   const [substitute, setSubstitute] = useState(item.substitute ?? '');
   const styles = useStyles();
   const palette = usePalette();
@@ -119,6 +134,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const swipedAt = useRef(0);
   const [paid, setPaid] = useState(item.estPrice === null ? '' : formatSar(item.estPrice));
 
+  const found = item.bought ? null : offerForItem(item.name, offers, lookupPrice(priceBook, item.name), toDateKey(new Date()));
   const quantity = item.unit === '' ? '' : `${item.qty} ${item.unit}`;
   const stateLabel = item.bought ? 'اتشترى' : 'لسه';
   const isMissing = item.notFound === true && !item.bought;
@@ -205,6 +221,11 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
             {flags !== '' && (
               <Txt kind="label" tone="tight">
                 {flags}
+              </Txt>
+            )}
+            {found !== null && (
+              <Txt kind="label" tone={found.verdict === 'dearer' ? 'over' : found.verdict === 'cheaper' ? 'ok' : undefined}>
+                {offerLine(found)}
               </Txt>
             )}
           </View>

@@ -1,4 +1,5 @@
-import { normalizeName } from './budget';
+import { CATALOG } from '../data/catalog';
+import { sameProduct } from './catalog';
 import type { Offer } from './types';
 
 /** Price of one unit, so a six-pack can be compared with a single item. */
@@ -11,12 +12,43 @@ export function isActive(offer: Offer, today: string): boolean {
   return offer.validUntil === null || offer.validUntil >= today;
 }
 
-/** An offer matches a list item when either name contains the other ("أرز" and "أرز بسمتي 5 كجم"). */
+/**
+ * An offer matches a list item when both names mean the same product in the
+ * family's dictionary ("رز" and "أرز بسمتي 5 كجم"), not merely when one sits inside the other.
+ */
 export function matchesItem(offer: Offer, itemName: string): boolean {
-  const item = normalizeName(itemName);
-  const offered = normalizeName(offer.name);
-  if (item === '' || offered === '') return false;
-  return offered.includes(item) || item.includes(offered);
+  return sameProduct(itemName, offer.name, CATALOG);
+}
+
+export type OfferVerdict = 'cheaper' | 'same' | 'dearer' | 'unknown';
+
+export interface ItemOffer {
+  readonly offer: Offer;
+  /** How the offer's unit price compares with what the family last paid. */
+  readonly verdict: OfferVerdict;
+  /** What one unit saves against the last price paid, in SAR. Negative when the offer costs more. */
+  readonly saving: number | null;
+}
+
+/**
+ * The best running offer for a list item, judged against the family's own last
+ * price so an "offer" that is no cheaper is called out.
+ */
+export function offerForItem(
+  itemName: string,
+  offers: readonly Offer[],
+  lastPaid: number | null,
+  today: string,
+): ItemOffer | null {
+  const offer = bestOffer(
+    itemName,
+    offers.filter((each) => isActive(each, today)),
+  );
+  if (offer === null) return null;
+  if (lastPaid === null || lastPaid <= 0) return { offer, verdict: 'unknown', saving: null };
+  const saving = Math.round((lastPaid - unitPrice(offer)) * 100) / 100;
+  const verdict = saving > 0 ? 'cheaper' : saving < 0 ? 'dearer' : 'same';
+  return { offer, verdict, saving };
 }
 
 function cheapest(offers: readonly Offer[]): Offer | null {

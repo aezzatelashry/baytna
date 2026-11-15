@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { adviseTrips, bestOffer, isActive, matchesItem, planTrips, unitPrice } from './offers';
+import { adviseTrips, bestOffer, isActive, matchesItem, offerForItem, planTrips, unitPrice } from './offers';
 import type { Offer } from './types';
 
 function offer(overrides: Partial<Offer>): Offer {
@@ -41,6 +41,29 @@ describe('offers', () => {
 
   test('returns no best offer when nothing matches', () => {
     expect(bestOffer('زيت', [offer({})])).toBeNull();
+  });
+});
+
+describe('offerForItem', () => {
+  const rice = offer({ id: 'rice', name: 'أرز بسمتي 5 كجم', price: 30, validUntil: '2026-11-20' });
+
+  test('links a list item to a flyer line through the dictionary', () => {
+    expect(offerForItem('رز', [rice], null, '2026-11-15')?.offer.id).toBe('rice');
+    expect(offerForItem('رز بلبن', [rice], null, '2026-11-15')).toBeNull();
+  });
+
+  test('calls an offer cheaper only when it beats the last price paid', () => {
+    expect(offerForItem('رز', [rice], 36, '2026-11-15')).toMatchObject({ verdict: 'cheaper', saving: 6 });
+    expect(offerForItem('رز', [rice], 28, '2026-11-15')).toMatchObject({ verdict: 'dearer', saving: -2 });
+    expect(offerForItem('رز', [rice], 30, '2026-11-15')).toMatchObject({ verdict: 'same', saving: 0 });
+  });
+
+  test('gives no verdict while the family has never bought the item', () => {
+    expect(offerForItem('رز', [rice], null, '2026-11-15')).toMatchObject({ verdict: 'unknown', saving: null });
+  });
+
+  test('ignores an offer that has ended', () => {
+    expect(offerForItem('رز', [rice], 36, '2026-11-21')).toBeNull();
   });
 });
 
