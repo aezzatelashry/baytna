@@ -18,6 +18,8 @@ import {
 import { toDateKey } from '@/domain/week';
 import { useStore } from '@/store/store';
 
+import { FundTile } from '../FundTile';
+
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
 
 function lifeLine(staple: Staple, today: string): string {
@@ -54,6 +56,8 @@ export function Pantry() {
         )}
         <Button kind="primary" label="أضف صنف للمخزن" onPress={() => setIsAdding(true)} />
       </Tile>
+
+      <FundTile kind="pantry" />
 
       {groups.map((group) => (
         <View key={group.kind}>

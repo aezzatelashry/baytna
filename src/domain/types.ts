@@ -23,6 +23,7 @@ export type Protein = 'meat' | 'fish' | 'chicken' | 'eggs' | 'none';
 export type Category =
   | 'protein'
   | 'produce'
+  | 'fruit'
   | 'dairy'
   | 'bakery'
   | 'pantry'
@@ -30,7 +31,8 @@ export type Category =
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   protein: 'لحوم ودواجن وأسماك',
-  produce: 'خضار وفاكهة',
+  produce: 'خضار',
+  fruit: 'فاكهة',
   dairy: 'ألبان وبيض',
   bakery: 'مخبوزات',
   pantry: 'بقالة',

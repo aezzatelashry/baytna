@@ -5,6 +5,7 @@ import { CountUp } from '@/components/CountUp';
 import { Button, IconButton, Row, Tile, Txt, type IconName } from '@/components/kit';
 import { Radius, RowDir, Spacing, themed } from '@/constants/theme';
 import { formatSar, spendByCategory, summarizeBudget, type BudgetStatus } from '@/domain/budget';
+import { weeklySetAside } from '@/domain/funds';
 import { entryFor } from '@/domain/meals';
 import { summarizePantry } from '@/domain/pantry';
 import { bestOffer, isActive } from '@/domain/offers';
@@ -40,6 +41,8 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
   const customMeals = useStore((state) => state.customMeals);
   const workBudgetMode = useStore((state) => state.workBudgetMode);
   const workBudget = useStore((state) => state.workBudget);
+  const funds = useStore((state) => state.funds);
+  const fruitBudget = useStore((state) => state.fruitBudget);
   const pantry = summarizePantry(useStore((state) => state.staples));
   const styles = useStyles();
 
@@ -52,6 +55,8 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
   const summary = summarizeBudget(weekItems, budget);
   const shares = spendByCategory(weekItems);
   const toBuy = weekItems.filter((item) => !item.bought);
+  const setAside = weeklySetAside(funds);
+  const fruitSpent = shares.find((entry) => entry.category === 'fruit')?.amount ?? 0;
   const todayMeals = SLOTS.map((slot) => {
     const entry = entryFor(plan, today, slot);
     return { slot, name: entry ? findMeal(entry.mealId, customMeals)?.name : undefined };
@@ -98,6 +103,25 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
           <Txt>
             نصيب الأسبوع من الرز والزيت والتوابل والمنظفات: {formatSar(pantry.weekly)} ريال. الباقي الفعلي بعده{' '}
             {formatSar(summary.remaining - pantry.weekly)} ريال.
+          </Txt>
+        </Tile>
+      )}
+
+      {setAside > 0 && (
+        <Tile>
+          <Txt kind="title">التحويش الأسبوعي</Txt>
+          <Txt>
+            {formatSar(setAside)} ريال بتتحوّش كل أسبوع لصندوق المخزن وحصّالة العروض. الباقي بعد التحويش{' '}
+            {formatSar(summary.remaining - setAside)} ريال.
+          </Txt>
+        </Tile>
+      )}
+
+      {fruitBudget > 0 && (
+        <Tile>
+          <Txt kind="title">الفاكهة</Txt>
+          <Txt tone={fruitSpent > fruitBudget ? 'over' : undefined}>
+            {formatSar(fruitSpent)} ريال من {formatSar(fruitBudget)} للأسبوع.
           </Txt>
         </Tile>
       )}

@@ -33,13 +33,13 @@ export const DESSERTS: readonly Dessert[] = [
     id: 'ds-fruit-salad',
     name: 'سلطة فواكه',
     note: 'بتستخدم الفاكهة الموجودة قبل ما تبوظ',
-    ingredients: [ing('موز', 4, 'حبة', 'produce'), ing('تفاح', 3, 'حبة', 'produce'), ing('برتقال', 4, 'حبة', 'produce')],
+    ingredients: [ing('موز', 4, 'حبة', 'fruit'), ing('تفاح', 3, 'حبة', 'fruit'), ing('برتقال', 4, 'حبة', 'fruit')],
   },
   {
     id: 'ds-banana-cake',
     name: 'كيكة الموز',
     note: 'للموز اللي استوى زيادة',
-    ingredients: [ing('موز', 3, 'حبة', 'produce'), ing('دقيق', 250, 'جم', 'pantry'), ing('بيض', 2, 'حبة', 'dairy'), ing('سكر', 120, 'جم', 'pantry'), ing('زيت', 100, 'مل', 'pantry')],
+    ingredients: [ing('موز', 3, 'حبة', 'fruit'), ing('دقيق', 250, 'جم', 'pantry'), ing('بيض', 2, 'حبة', 'dairy'), ing('سكر', 120, 'جم', 'pantry'), ing('زيت', 100, 'مل', 'pantry')],
   },
   {
     id: 'ds-basbousa',
@@ -51,6 +51,6 @@ export const DESSERTS: readonly Dessert[] = [
     id: 'ds-apple-compote',
     name: 'كومبوت تفاح بالقرفة',
     note: 'للتفاح اللي بدأ يدبل',
-    ingredients: [ing('تفاح', 6, 'حبة', 'produce'), ing('سكر', 80, 'جم', 'pantry'), ing('قرفة', 5, 'جم', 'pantry')],
+    ingredients: [ing('تفاح', 6, 'حبة', 'fruit'), ing('سكر', 80, 'جم', 'pantry'), ing('قرفة', 5, 'جم', 'pantry')],
   },
 ];

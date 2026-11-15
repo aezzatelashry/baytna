@@ -15,6 +15,7 @@ import {
   type Category,
   type DietTag,
   type Ingredient,
+  type Meal,
   type MealSlot,
   type MealStyle,
   type Protein,
@@ -39,22 +40,25 @@ function toggled<T>(list: readonly T[], value: T): T[] {
 type NewMealSheetProps = {
   isOpen: boolean;
   onClose: () => void;
+  /** One of the family's own dishes to change. Give the sheet a `key` of its id so the fields start from it. */
+  editing?: Meal;
 };
 
-/** The family adds one of its own dishes, with what goes in it. */
-export function NewMealSheet({ isOpen, onClose }: NewMealSheetProps) {
+/** The family adds one of its own dishes, or changes one, with what goes in it. */
+export function NewMealSheet({ isOpen, onClose, editing }: NewMealSheetProps) {
   const addCustomMeal = useStore((state) => state.addCustomMeal);
+  const updateCustomMeal = useStore((state) => state.updateCustomMeal);
   const styles = useStyles();
-  const [name, setName] = useState('');
-  const [slots, setSlots] = useState<readonly MealSlot[]>(['lunch']);
-  const [protein, setProtein] = useState<Protein>('none');
-  const [tags, setTags] = useState<readonly DietTag[]>([]);
-  const [ingredients, setIngredients] = useState<readonly Ingredient[]>([]);
+  const [name, setName] = useState(editing?.name ?? '');
+  const [slots, setSlots] = useState<readonly MealSlot[]>(editing?.slots ?? ['lunch']);
+  const [protein, setProtein] = useState<Protein>(editing?.protein ?? 'none');
+  const [tags, setTags] = useState<readonly DietTag[]>(editing?.tags ?? []);
+  const [ingredients, setIngredients] = useState<readonly Ingredient[]>(editing?.ingredients ?? []);
   const [ingredientName, setIngredientName] = useState('');
   const [category, setCategory] = useState<Category>('produce');
-  const [style, setStyle] = useState<MealStyle>('home');
-  const [isBoxable, setIsBoxable] = useState(false);
-  const [minutes, setMinutes] = useState('');
+  const [style, setStyle] = useState<MealStyle>(editing?.style ?? 'home');
+  const [isBoxable, setIsBoxable] = useState(editing?.boxable === true);
+  const [minutes, setMinutes] = useState(editing?.minutes ? String(editing.minutes) : '');
 
   const canSave = name.trim() !== '' && slots.length > 0;
 
@@ -67,7 +71,7 @@ export function NewMealSheet({ isOpen, onClose }: NewMealSheetProps) {
   const handleSave = (): void => {
     if (!canSave) return;
     const time = Number.parseInt(minutes, 10);
-    addCustomMeal({
+    const meal = {
       name,
       slots,
       protein,
@@ -76,7 +80,14 @@ export function NewMealSheet({ isOpen, onClose }: NewMealSheetProps) {
       style,
       boxable: isBoxable,
       ...(Number.isFinite(time) && time > 0 ? { minutes: time } : {}),
-    });
+    };
+    if (editing) {
+      updateCustomMeal(editing.id, meal);
+      showToast(`اتعدّلت "${name.trim()}"`);
+      onClose();
+      return;
+    }
+    addCustomMeal(meal);
     showToast(`"${name.trim()}" اتضافت لأكلاتكم`);
     setName('');
     setTags([]);
@@ -85,7 +96,7 @@ export function NewMealSheet({ isOpen, onClose }: NewMealSheetProps) {
   };
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose} title="أكلة جديدة">
+    <Sheet isOpen={isOpen} onClose={onClose} title={editing ? 'عدّل الأكلة' : 'أكلة جديدة'}>
       <Field label="اسم الأكلة" value={name} onChangeText={setName} />
 
       <Txt kind="strong">تتاكل في</Txt>

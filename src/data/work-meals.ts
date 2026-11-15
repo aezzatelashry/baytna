@@ -154,7 +154,7 @@ export const WORK_MEALS: readonly WorkMeal[] = [
     kind: 'jar',
     needsHeat: false,
     tags: ['dairy', 'gluten'],
-    ingredients: [ing('شوفان', 50, 'جم', 'pantry'), ing('زبادي', 1, 'علبة', 'dairy'), ing('موز', 1, 'حبة', 'produce'), ing('عسل', 10, 'جم', 'pantry')],
+    ingredients: [ing('شوفان', 50, 'جم', 'pantry'), ing('زبادي', 1, 'علبة', 'dairy'), ing('موز', 1, 'حبة', 'fruit'), ing('عسل', 10, 'جم', 'pantry')],
   },
   {
     id: 'wk-oats-milk',
@@ -181,7 +181,7 @@ export const WORK_MEALS: readonly WorkMeal[] = [
     kind: 'snack',
     needsHeat: false,
     tags: [],
-    ingredients: [ing('موز', 1, 'حبة', 'produce'), ing('مكسرات نيئة', 20, 'جم', 'pantry')],
+    ingredients: [ing('موز', 1, 'حبة', 'fruit'), ing('مكسرات نيئة', 20, 'جم', 'pantry')],
   },
   {
     id: 'wk-dates-yogurt',

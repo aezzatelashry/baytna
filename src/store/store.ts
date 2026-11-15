@@ -8,6 +8,7 @@ import { mealById, SEED_MEALS } from '@/data/seed-meals';
 import { MAX_NOTES, type AssistantAction } from '@/domain/assistant';
 import { lookupPrice, normalizeName, recordPrice } from '@/domain/budget';
 import { DEFAULT_RHYTHM, generateWeekPlan, missingIngredients, styleSequence, type Rhythm } from '@/domain/meals';
+import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
 import type { Category, DietTag, Ingredient, ListItem, Meal, MealSlot, Member, Offer, PlanEntry, PriceBook, SyncedRow, ThemeMode } from '@/domain/types';
@@ -77,6 +78,10 @@ interface State {
   /** How many light, home and treat lunches the family wants in a week. */
   readonly rhythm: Rhythm;
   readonly waste: readonly WasteEntry[];
+  /** Money set aside weekly for restocking the store and for stocking up on offers. */
+  readonly funds: Readonly<Record<FundKind, Fund>>;
+  /** Weekly amount the family wants to keep for fruit. Zero means not tracked. */
+  readonly fruitBudget: number;
   /** Long-life things: rice, oil, spices, cleaning. Kept apart from the weekly list. */
   readonly staples: readonly Staple[];
   readonly shops: readonly Shop[];
@@ -128,6 +133,12 @@ interface Actions {
   setAvoidsAtHome: (memberId: string, atHome: boolean) => void;
   setCar: (car: CarCosts) => void;
   setRhythm: (rhythm: Rhythm) => void;
+  setFundWeekly: (kind: FundKind, weekly: number) => void;
+  spendFund: (kind: FundKind, amount: number) => void;
+  /** Tops the funds up once for every week that has started. Safe to call on every open. */
+  fillFunds: () => void;
+  setFruitBudget: (amount: number) => void;
+  updateCustomMeal: (id: string, meal: NewMeal) => void;
   /** Notes something thrown away and what it had cost. */
   addWaste: (name: string, price: number) => void;
   removeWaste: (id: string) => void;
@@ -240,6 +251,8 @@ export const useStore = create<Store>()(
       notes: [],
       rhythm: DEFAULT_RHYTHM,
       waste: [],
+      funds: { pantry: EMPTY_FUND, offers: EMPTY_FUND },
+      fruitBudget: 0,
       staples: [],
       shops: [],
       shopPrices: {},
@@ -320,16 +333,36 @@ export const useStore = create<Store>()(
         })),
       removeWaste: (id) => set((state) => ({ waste: state.waste.filter((entry) => entry.id !== id) })),
 
+      // Buying for the long-life store is paid out of its fund, not out of the week.
       addStaple: (input) =>
         set((state) => ({
           staples: [
             ...state.staples,
             { ...input, name: input.name.trim(), id: Crypto.randomUUID(), boughtOn: toDateKey(new Date()) },
           ],
+          funds: { ...state.funds, pantry: spendFromFund(state.funds.pantry, input.price) },
         })),
       restockStaple: (id, price) =>
         set((state) => ({
           staples: state.staples.map((staple) => (staple.id === id ? restock(staple, price, toDateKey(new Date())) : staple)),
+          funds: { ...state.funds, pantry: spendFromFund(state.funds.pantry, price) },
+        })),
+
+      setFundWeekly: (kind, weekly) =>
+        set((state) => ({ funds: { ...state.funds, [kind]: { ...state.funds[kind], weekly } } })),
+      spendFund: (kind, amount) =>
+        set((state) => ({ funds: { ...state.funds, [kind]: spendFromFund(state.funds[kind], amount) } })),
+      fillFunds: () =>
+        set((state) => {
+          const weekStart = currentWeekStart(state.weekStartsOn);
+          const pantry = fillFund(state.funds.pantry, weekStart);
+          const offers = fillFund(state.funds.offers, weekStart);
+          return pantry === state.funds.pantry && offers === state.funds.offers ? state : { funds: { pantry, offers } };
+        }),
+      setFruitBudget: (fruitBudget) => set({ fruitBudget }),
+      updateCustomMeal: (id, meal) =>
+        set((state) => ({
+          customMeals: state.customMeals.map((kept) => (kept.id === id ? { ...meal, name: meal.name.trim(), id } : kept)),
         })),
       removeStaple: (id) => set((state) => ({ staples: state.staples.filter((staple) => staple.id !== id) })),
       restoreStaple: (staple) =>

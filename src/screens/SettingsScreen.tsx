@@ -38,6 +38,8 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
   const setMyName = useStore((state) => state.setMyName);
   const members = useStore((state) => state.members);
   const addMember = useStore((state) => state.addMember);
+  const fruitBudget = useStore((state) => state.fruitBudget);
+  const setFruitBudget = useStore((state) => state.setFruitBudget);
   const role = useStore((state) => state.role);
   const setRole = useStore((state) => state.setRole);
   const notes = useStore((state) => state.notes);
@@ -72,6 +74,12 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
 
       <Tile>
         <Field label="ميزانية الأسبوع بالريال" value={budgetText} onChangeText={setBudgetText} onEndEditing={handleBudget} keyboardType="decimal-pad" />
+        <Field
+          label="ميزانية الفاكهة في الأسبوع (اختياري)"
+          defaultValue={fruitBudget > 0 ? formatSar(fruitBudget) : ''}
+          onEndEditing={(event) => setFruitBudget(parsePrice(event.nativeEvent.text) ?? 0)}
+          keyboardType="decimal-pad"
+        />
         <Field label="اسمك، بيظهر جنب اللي بتضيفه" defaultValue={myName} onEndEditing={(event) => setMyName(event.nativeEvent.text)} />
       </Tile>
 

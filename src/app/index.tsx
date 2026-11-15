@@ -87,7 +87,13 @@ export default function Home() {
   const [isWorkBox, setIsWorkBox] = useState(false);
 
   const hasOnboarded = useStore((state) => state.hasOnboarded);
+  const fillFunds = useStore((state) => state.fillFunds);
   const isHydrated = useHydrated();
+
+  // Each new week the set-aside funds get their weekly amount, once.
+  useEffect(() => {
+    if (isHydrated) fillFunds();
+  }, [isHydrated, fillFunds]);
 
   // Until the saved state is read back, nothing is shown: a returning family must not see the welcome flash by.
   if (!isHydrated) return <SafeAreaView style={styles.root} />;

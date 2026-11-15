@@ -55,7 +55,7 @@ const respondTool = {
           properties: {
             type: { type: 'string', enum: ['add_item', 'remove_item', 'set_budget', 'set_meal', 'remember'] },
             name: nullable('string'),
-            category: { type: ['string', 'null'], enum: ['protein', 'produce', 'dairy', 'bakery', 'pantry', 'household', null] },
+            category: { type: ['string', 'null'], enum: ['protein', 'produce', 'fruit', 'dairy', 'bakery', 'pantry', 'household', null] },
             price: nullable('number'),
             date: nullable('string'),
             slot: { type: ['string', 'null'], enum: ['breakfast', 'lunch', 'dinner', null] },

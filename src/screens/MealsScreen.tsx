@@ -23,6 +23,7 @@ const CART_ICON: IconName = { ios: 'cart.badge.plus', android: 'add_shopping_car
 const LOCK_ICON: IconName = { ios: 'lock.fill', android: 'lock', web: 'lock' };
 const STAR_ICON: IconName = { ios: 'star.fill', android: 'star', web: 'star' };
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
+const EDIT_ICON: IconName = { ios: 'pencil', android: 'edit', web: 'edit' };
 const DAY_HEIGHT = 64;
 const THUMB_SIZE = 56;
 const BADGE_SIZE = 18;
@@ -123,6 +124,7 @@ function OurMeals() {
   const removeCustomMeal = useStore((state) => state.removeCustomMeal);
   const restoreCustomMeal = useStore((state) => state.restoreCustomMeal);
   const styles = useStyles();
+  const [editing, setEditing] = useState<Meal | null>(null);
 
   const handleRemove = (meal: Meal): void => {
     removeCustomMeal(meal.id);
@@ -141,9 +143,11 @@ function OurMeals() {
               {meal.slots.map((slot) => SLOT_LABELS[slot]).join('، ')}، {meal.ingredients.length} مكون
             </Txt>
           </View>
+          <IconButton icon={EDIT_ICON} label={`عدّل ${meal.name}`} onPress={() => setEditing(meal)} />
           <IconButton icon={DELETE_ICON} label={`احذف ${meal.name}`} tone="danger" onPress={() => handleRemove(meal)} />
         </View>
       ))}
+      {editing !== null && <NewMealSheet key={editing.id} isOpen editing={editing} onClose={() => setEditing(null)} />}
     </Tile>
   );
 }
