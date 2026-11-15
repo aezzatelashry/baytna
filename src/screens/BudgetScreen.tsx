@@ -13,6 +13,7 @@ import { CATEGORY_LABELS, SLOT_LABELS, SLOTS } from '@/domain/types';
 import { dayName, toDateKey } from '@/domain/week';
 import { currentWeekStart, findMeal, useStore } from '@/store/store';
 
+import { FreshTile } from './list/FreshTile';
 import { RunningLowTile } from './list/RunningLowTile';
 import { WeekReportTile } from './today/WeekReportTile';
 
@@ -112,6 +113,7 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
         </Tile>
       )}
 
+      <FreshTile />
       <RunningLowTile />
 
       {setAside > 0 && (

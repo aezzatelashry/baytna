@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { Palettes, usePalette } from '@/constants/theme';
+import { usePalette } from '@/constants/theme';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -33,7 +33,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar style={palette === Palettes.dark ? 'light' : 'dark'} />
+      <StatusBar style={palette.isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.paper } }} />
     </GestureHandlerRootView>
   );

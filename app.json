@@ -13,7 +13,7 @@
     "android": {
       "package": "com.baytna.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1F5A34",
+        "backgroundColor": "#3A22B8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -29,12 +29,20 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1F5A34",
+          "backgroundColor": "#3A22B8",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ],
       "expo-speech-recognition",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "بيتنا بيستخدم الكاميرا عشان تصوّروا أكلاتكم.",
+          "photosPermission": "بيتنا بيفتح الصور عشان تختاروا صورة للأكلة.",
+          "microphonePermission": false
+        }
+      ],
       "@react-native-google-signin/google-signin"
     ],
     "experiments": {

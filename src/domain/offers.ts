@@ -126,13 +126,58 @@ export function planTrips(
 export interface TripAdvice {
   readonly one: TripPlan | null;
   readonly two: TripPlan | null;
-  /** True when a second shop covers more items or costs less than the best single shop. */
+  /**
+   * True when a second shop covers more items, or saves more on the same items
+   * than the drive to it costs.
+   */
   readonly secondTripHelps: boolean;
+  /** What the pair saves on the basket over the single shop, in SAR. Zero when it covers more instead. */
+  readonly basketSaving: number;
+  /**
+   * What the pair's driving costs over the single shop's, in fuel and time.
+   * Null when a shop's distance or the car's costs are not known.
+   */
+  readonly extraDriveCost: number | null;
+  /** The basket saving once the extra driving is paid for. */
+  readonly netSaving: number;
 }
 
-export function adviseTrips(items: readonly string[], offers: readonly Offer[]): TripAdvice {
+/** What driving to a named shop costs, or null when that is not known. */
+export type DriveCost = (store: string) => number | null;
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function driveTotal(stores: readonly string[], driveCost: DriveCost): number | null {
+  return stores.reduce<number | null>((sum, store) => {
+    const cost = driveCost(store);
+    return sum === null || cost === null ? null : sum + cost;
+  }, 0);
+}
+
+const UNKNOWN_DRIVE: DriveCost = () => null;
+
+/**
+ * One shop or two for this week's list. With `driveCost`, a pair that only saves
+ * money has to save more than its extra driving costs.
+ */
+export function adviseTrips(
+  items: readonly string[],
+  offers: readonly Offer[],
+  driveCost: DriveCost = UNKNOWN_DRIVE,
+): TripAdvice {
   const one = planTrips(items, offers, 1);
   const two = planTrips(items, offers, 2);
-  const secondTripHelps = two !== null && two.stores.length === 2 && better(two, one);
-  return { one, two, secondTripHelps };
+  if (one === null || two === null || two.stores.length < 2) {
+    return { one, two, secondTripHelps: false, basketSaving: 0, extraDriveCost: null, netSaving: 0 };
+  }
+
+  const pairDrive = driveTotal(two.stores, driveCost);
+  const singleDrive = driveTotal(one.stores, driveCost);
+  const extraDriveCost = pairDrive === null || singleDrive === null ? null : round2(Math.max(pairDrive - singleDrive, 0));
+  const coversMore = two.picks.length > one.picks.length;
+  const basketSaving = coversMore ? 0 : round2(Math.max(one.total - two.total, 0));
+  const netSaving = round2(basketSaving - (extraDriveCost ?? 0));
+  return { one, two, secondTripHelps: coversMore || netSaving > 0, basketSaving, extraDriveCost, netSaving };
 }

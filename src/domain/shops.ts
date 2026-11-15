@@ -1,4 +1,4 @@
-import { lookupPrice } from './budget';
+import { lookupPrice, normalizeName } from './budget';
 import { judgeTrip, type CarCosts } from './trip';
 import type { PriceBook } from './types';
 
@@ -57,6 +57,23 @@ export function quoteShops(
   return shops
     .map((shop) => quote(shop, items, prices[shop.id] ?? {}, car))
     .sort((a, b) => b.pricedCount - a.pricedCount || a.effective - b.effective);
+}
+
+/**
+ * What driving to a named shop costs in fuel and time, or null when the shop is not
+ * in "my shops" or the car's costs were never entered. Names match loosely, so
+ * "العثيم" finds "أسواق العثيم".
+ */
+export function tripCostTo(storeName: string, shops: readonly Shop[], car: CarCosts | null): number | null {
+  const wanted = normalizeName(storeName);
+  if (car === null || wanted === '') return null;
+  const shop = shops.find((each) => {
+    const name = normalizeName(each.name);
+    return name !== '' && (name.includes(wanted) || wanted.includes(name));
+  });
+  if (!shop) return null;
+  const verdict = judgeTrip({ saving: 0, extraKm: shop.extraKm, extraMinutes: shop.extraMinutes }, car);
+  return Math.round((verdict.fuelCost + verdict.timeCost) * 100) / 100;
 }
 
 /** The shop to go to, or null when no shop has a recorded price for anything on the list. */

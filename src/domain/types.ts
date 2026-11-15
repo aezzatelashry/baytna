@@ -163,3 +163,8 @@ export interface Offer {
 
 /** How this phone picks light or dark: follow the system, or force one. */
 export type ThemeMode = 'auto' | 'light' | 'dark';
+
+/** The colour family this phone wears. Each has a light and a dark side. */
+export type ColorTheme = 'royal' | 'sunset' | 'ocean';
+
+export const DEFAULT_COLOR_THEME: ColorTheme = 'royal';

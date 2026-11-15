@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { bestShop, quoteShops, type Shop, type ShopPrices } from './shops';
+import { bestShop, quoteShops, tripCostTo, type Shop, type ShopPrices } from './shops';
 import type { CarCosts } from './trip';
 
 // Test figures only.
@@ -14,6 +14,20 @@ function book(prices: Record<string, number>) {
 }
 
 const list = ['أرز', 'زيت'];
+
+describe('tripCostTo', () => {
+  test('prices the drive to a shop the family listed, matching its name loosely', () => {
+    const farShop: Shop = { ...far, name: 'أسواق العثيم' };
+
+    expect(tripCostTo('العثيم', [near, farShop], car)).toBe(19);
+    expect(tripCostTo('القريب', [near, farShop], car)).toBe(0);
+  });
+
+  test('does not guess for an unknown shop or a car with no costs', () => {
+    expect(tripCostTo('لولو', [near, far], car)).toBeNull();
+    expect(tripCostTo('البعيد', [near, far], null)).toBeNull();
+  });
+});
 
 describe('quoteShops', () => {
   test('keeps the near shop when the far one saves less than the drive costs', () => {

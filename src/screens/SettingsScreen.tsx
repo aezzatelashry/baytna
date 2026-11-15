@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, Chip, Field, IconButton, Sheet, Tile, Txt, type IconName } from '@/components/kit';
 import { showToast } from '@/components/toast';
-import { RowDir, Spacing } from '@/constants/theme';
+import { COLOR_THEME_LABELS, COLOR_THEMES, RowDir, Spacing } from '@/constants/theme';
 import { formatSar, parsePrice } from '@/domain/budget';
 import { ROLE_LABELS, ROLES } from '@/domain/orders';
 import { COMMON_AVOIDS, DIET_TAG_LABELS, type DietTag, type Member, type ThemeMode } from '@/domain/types';
@@ -46,6 +46,8 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
   const forgetNote = useStore((state) => state.forgetNote);
   const themeMode = useStore((state) => state.themeMode);
   const setThemeMode = useStore((state) => state.setThemeMode);
+  const colorTheme = useStore((state) => state.colorTheme);
+  const setColorTheme = useStore((state) => state.setColorTheme);
 
   const [budgetText, setBudgetText] = useState(formatSar(budget));
   const [memberName, setMemberName] = useState('');
@@ -98,6 +100,12 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
         <View style={styles.chips}>
           {THEME_MODES.map(({ mode, label }) => (
             <Chip key={mode} label={label} selected={themeMode === mode} onPress={() => setThemeMode(mode)} />
+          ))}
+        </View>
+        <Txt kind="strong">لون التطبيق</Txt>
+        <View style={styles.chips}>
+          {COLOR_THEMES.map((theme) => (
+            <Chip key={theme} label={COLOR_THEME_LABELS[theme]} selected={colorTheme === theme} onPress={() => setColorTheme(theme)} />
           ))}
         </View>
       </View>

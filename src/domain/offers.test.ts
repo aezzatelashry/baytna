@@ -91,6 +91,40 @@ describe('trip planning', () => {
     expect(advice.secondTripHelps).toBe(false);
   });
 
+  test('says a cheaper pair helps when the driving is unknown', () => {
+    const advice = adviseTrips(['أرز', 'زيت'], offers);
+
+    expect(advice.basketSaving).toBe(14);
+    expect(advice.extraDriveCost).toBeNull();
+    expect(advice.secondTripHelps).toBe(true);
+  });
+
+  test('drops the cheaper pair when its extra driving eats the saving', () => {
+    // Test figures only: each shop costs this much to drive to.
+    const drive: Record<string, number> = { بنده: 0, العثيم: 8, لولو: 11 };
+
+    const advice = adviseTrips(['أرز', 'زيت'], offers, (store) => drive[store] ?? null);
+
+    expect(advice.extraDriveCost).toBe(19);
+    expect(advice.netSaving).toBe(-5);
+    expect(advice.secondTripHelps).toBe(false);
+  });
+
+  test('keeps the pair when it still saves after the driving', () => {
+    const advice = adviseTrips(['أرز', 'زيت'], offers, () => 3);
+
+    expect(advice.extraDriveCost).toBe(3);
+    expect(advice.netSaving).toBe(11);
+    expect(advice.secondTripHelps).toBe(true);
+  });
+
+  test('still sends the family to a second shop that covers more, whatever the drive', () => {
+    const advice = adviseTrips(list, offers, () => 40);
+
+    expect(advice.secondTripHelps).toBe(true);
+    expect(advice.basketSaving).toBe(0);
+  });
+
   test('returns no plan when no shop has anything on the list', () => {
     expect(planTrips(['حليب'], offers, 1)).toBeNull();
     expect(planTrips(list, [], 2)).toBeNull();

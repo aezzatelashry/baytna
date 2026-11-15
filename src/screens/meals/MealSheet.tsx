@@ -12,8 +12,11 @@ import { MEAL_STYLE_LABELS, QUICK_MINUTES, SLOT_LABELS, type MealSlot } from '@/
 import { dayName } from '@/domain/week';
 import { youtubeThumbnailUrl, youtubeVideoId, youtubeWatchUrl } from '@/domain/youtube';
 import { allMeals, findMeal, useStore } from '@/store/store';
+import { pickMealPhoto, type PhotoSource } from '@/sync/meal-photo';
 
 const UNLINK_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
+const CAMERA_ICON: IconName = { ios: 'camera', android: 'photo_camera', web: 'photo_camera' };
+const GALLERY_ICON: IconName = { ios: 'photo.on.rectangle', android: 'photo_library', web: 'photo_library' };
 const THUMB_RATIO = 16 / 9;
 
 type MealSheetProps = {
@@ -38,6 +41,8 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
   const moveMeal = useStore((state) => state.moveMeal);
   const addMealToList = useStore((state) => state.addMealToList);
   const setMealVideo = useStore((state) => state.setMealVideo);
+  const mealPhotos = useStore((state) => state.mealPhotos);
+  const setMealPhoto = useStore((state) => state.setMealPhoto);
   const styles = useStyles();
   const [link, setLink] = useState('');
   const [linkProblem, setLinkProblem] = useState('');
@@ -51,6 +56,7 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
   const excluded = membersExcludedFrom(meal, members).map((member) => member.name);
   const cost = estimateMealCost(meal, priceBook);
   const videoId = mealVideos[meal.id];
+  const photo = mealPhotos[meal.id];
   const isFavorite = favorites.includes(meal.id);
   const isLocked = entry.locked === true;
   const shownOptions = isQuickOnly
@@ -72,6 +78,12 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
     setLink('');
     setLinkProblem('');
   };
+  const handlePhoto = async (source: PhotoSource): Promise<void> => {
+    const result = await pickMealPhoto(source, meal.id);
+    if (result.status === 'picked') setMealPhoto(meal.id, result.uri);
+    else if (result.status === 'denied') showToast('محتاجين إذن الكاميرا من إعدادات الموبايل.');
+    else if (result.status === 'failed') showToast('الصورة ما اتحفظتش. جرّب تاني.');
+  };
   const handleAddToList = (): void => {
     const added = addMealToList(meal.id);
     showToast(added === 0 ? 'كل مكونات الوجبة موجودة في القائمة' : `اتضاف ${added} صنف للقائمة`);
@@ -88,6 +100,20 @@ export function MealSheet({ date, slot, days, isOpen, onClose }: MealSheetProps)
         {SLOT_LABELS[slot]} يوم {dayName(date)}
         {facts !== '' ? `، ${facts}` : ''}
       </Txt>
+
+      {photo !== undefined && (
+        <Image source={{ uri: photo }} accessibilityLabel={`صورة ${meal.name}`} contentFit="cover" style={styles.thumb} />
+      )}
+      <View style={styles.row}>
+        <Txt kind="label" style={styles.grow}>
+          {photo === undefined ? 'صوّروا الأكلة لما تطلع حلوة، وتفضل معاها.' : 'صورتكم، محفوظة على الموبايل ده بس.'}
+        </Txt>
+        <IconButton icon={CAMERA_ICON} label={`صوّر ${meal.name}`} onPress={() => void handlePhoto('camera')} />
+        <IconButton icon={GALLERY_ICON} label={`اختار صورة ${meal.name} من الاستوديو`} onPress={() => void handlePhoto('library')} />
+        {photo !== undefined && (
+          <IconButton icon={UNLINK_ICON} label="شيل الصورة" tone="danger" onPress={() => setMealPhoto(meal.id, null)} />
+        )}
+      </View>
 
       {videoId !== undefined && (
         <View style={styles.video}>

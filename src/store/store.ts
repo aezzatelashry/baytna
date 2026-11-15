@@ -20,10 +20,26 @@ import {
   withLeftoversDay,
   type Rhythm,
 } from '@/domain/meals';
+import { freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
-import type { Category, DietTag, Ingredient, ListItem, Meal, MealSlot, Member, Offer, PlanEntry, PriceBook, SyncedRow, ThemeMode } from '@/domain/types';
+import {
+  DEFAULT_COLOR_THEME,
+  type Category,
+  type ColorTheme,
+  type DietTag,
+  type Ingredient,
+  type ListItem,
+  type Meal,
+  type MealSlot,
+  type Member,
+  type Offer,
+  type PlanEntry,
+  type PriceBook,
+  type SyncedRow,
+  type ThemeMode,
+} from '@/domain/types';
 import { restock, type Staple } from '@/domain/pantry';
 import type { Shop, ShopPrices } from '@/domain/shops';
 import type { CarCosts } from '@/domain/trip';
@@ -81,6 +97,12 @@ interface State {
   readonly myName: string;
   /** Local to this phone: follow the system, or force light (bright shops) or dark. */
   readonly themeMode: ThemeMode;
+  /** Local to this phone: the colour family the app wears. */
+  readonly colorTheme: ColorTheme;
+  /** Fresh things bought lately, so the ones about to go off are eaten first. */
+  readonly fresh: readonly FreshItem[];
+  /** The family's own photo of a meal, as a file address keyed by meal id. Local to this phone. */
+  readonly mealPhotos: Readonly<Record<string, string>>;
   /** False until the first-run welcome is finished or skipped. */
   readonly hasOnboarded: boolean;
   readonly members: readonly Member[];
@@ -142,6 +164,14 @@ interface Actions {
   setBudget: (budget: number) => void;
   setMyName: (name: string) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setColorTheme: (theme: ColorTheme) => void;
+  /** It was eaten or thrown away: off the fresh shelf. */
+  removeFresh: (id: string) => void;
+  restoreFresh: (item: FreshItem) => void;
+  /** Moves an item's expected shelf life by some days. */
+  adjustFresh: (id: string, change: number) => void;
+  /** Keeps the family's photo of a meal; null removes it. */
+  setMealPhoto: (mealId: string, uri: string | null) => void;
   finishOnboarding: () => void;
   addMember: (name: string) => void;
   removeMember: (id: string) => void;
@@ -271,6 +301,9 @@ export const useStore = create<Store>()(
       weekStartsOn: SATURDAY,
       myName: '',
       themeMode: 'auto',
+      colorTheme: DEFAULT_COLOR_THEME,
+      fresh: [],
+      mealPhotos: {},
       hasOnboarded: false,
       members: [],
       items: [],
@@ -311,6 +344,17 @@ export const useStore = create<Store>()(
       setBudget: (budget) => set({ budget }),
       setMyName: (myName) => set({ myName: myName.trim() }),
       setThemeMode: (themeMode) => set({ themeMode }),
+      setColorTheme: (colorTheme) => set({ colorTheme }),
+      removeFresh: (id) => set((state) => ({ fresh: state.fresh.filter((item) => item.id !== id) })),
+      restoreFresh: (item) =>
+        set((state) => (state.fresh.some((kept) => kept.id === item.id) ? state : { fresh: [...state.fresh, item] })),
+      adjustFresh: (id, change) =>
+        set((state) => ({ fresh: state.fresh.map((item) => (item.id === id ? withShelfDays(item, change) : item)) })),
+      setMealPhoto: (mealId, uri) =>
+        set((state) => {
+          const { [mealId]: _removed, ...rest } = state.mealPhotos;
+          return { mealPhotos: uri === null ? rest : { ...rest, [mealId]: uri } };
+        }),
       finishOnboarding: () => set({ hasOnboarded: true }),
 
       addMember: (name) =>
@@ -494,9 +538,14 @@ export const useStore = create<Store>()(
             isPriced && shopId !== null
               ? { ...state.shopPrices, [shopId]: recordPrice(state.shopPrices[shopId] ?? {}, target.name, paidPrice, today) }
               : state.shopPrices;
+          // Fresh things go on the shelf that warns before they go off.
+          const shelved = bought ? freshFromPurchase(Crypto.randomUUID(), target.name, target.category, today) : null;
+          const kept = bought ? state.fresh : withoutPurchase(state.fresh, target.name, today);
+          const fresh = shelved === null ? kept : withPurchase(kept, shelved);
           return {
             priceBook,
             shopPrices,
+            fresh,
             items: patchRow(state.items, id, { bought, paidPrice: bought ? paidPrice : null }),
           };
         }),

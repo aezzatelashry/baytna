@@ -3,8 +3,10 @@ import { View } from 'react-native';
 import { Tile, Txt } from '@/components/kit';
 import { Spacing, themed } from '@/constants/theme';
 import { formatSar } from '@/domain/budget';
-import { adviseTrips, type TripPlan } from '@/domain/offers';
+import { adviseTrips, type TripAdvice, type TripPlan } from '@/domain/offers';
+import { tripCostTo } from '@/domain/shops';
 import type { Offer } from '@/domain/types';
+import { useStore } from '@/store/store';
 
 type TripPlanTileProps = {
   /** Names of this week's items that are still to buy. */
@@ -27,9 +29,30 @@ function PlanLines({ title, plan }: { title: string; plan: TripPlan }) {
   );
 }
 
-/** One shop or two? Compares the best single shop with the best pair for this week's list. */
+function verdictLine(advice: TripAdvice): string {
+  if (!advice.secondTripHelps) {
+    return advice.basketSaving > 0 && advice.extraDriveCost !== null
+      ? 'مشوار واحد أحسن؛ توفير المتجر التاني أقل من تكلفة مشواره.'
+      : 'مشوار واحد كفاية؛ المتجر التاني مش هيوفّر.';
+  }
+  return advice.basketSaving > 0 ? 'مشوارين أحسن الأسبوع ده.' : 'مشوارين: المتجر التاني بيغطي أصناف أكتر.';
+}
+
+function driveLine(advice: TripAdvice): string {
+  if (advice.extraDriveCost === null) {
+    return 'تكلفة المشوار مش محسوبة. سجّل المتاجر دي في "متاجري" وبيانات عربيتك في حاسبة المشوار عشان تدخل في القرار.';
+  }
+  const drive = `المشوار الزيادة بيكلّف ${formatSar(advice.extraDriveCost)} ريال بنزين ووقت.`;
+  if (advice.basketSaving === 0) return drive;
+  const net = advice.netSaving >= 0 ? 'صافي التوفير' : 'يعني خسارة';
+  return `${drive} المتجرين بيوفّروا ${formatSar(advice.basketSaving)} ريال، ${net} ${formatSar(Math.abs(advice.netSaving))} ريال.`;
+}
+
+/** One shop or two? Compares the best single shop with the best pair, the drive included. */
 export function TripPlanTile({ items, offers }: TripPlanTileProps) {
-  const advice = adviseTrips(items, offers);
+  const shops = useStore((state) => state.shops);
+  const car = useStore((state) => state.car);
+  const advice = adviseTrips(items, offers, (store) => tripCostTo(store, shops, car));
 
   if (items.length === 0) {
     return (
@@ -48,19 +71,18 @@ export function TripPlanTile({ items, offers }: TripPlanTileProps) {
     );
   }
 
-  const verdict = advice.secondTripHelps
-    ? 'مشوارين أحسن الأسبوع ده.'
-    : 'مشوار واحد كفاية؛ المتجر التاني مش هيوفّر.';
+  const hasPair = advice.two !== null && advice.two.stores.length === 2;
 
   return (
     <Tile>
       <Txt kind="title">خطة الشراء</Txt>
-      <Txt kind="strong" tone="ok">
-        {verdict}
+      <Txt kind="strong" tone={advice.secondTripHelps ? 'ok' : undefined}>
+        {verdictLine(advice)}
       </Txt>
       <PlanLines title="مشوار واحد" plan={advice.one} />
-      {advice.secondTripHelps && advice.two !== null && <PlanLines title="مشوارين" plan={advice.two} />}
-      <Txt kind="label">الحساب على العروض المحفوظة بس، ومن غير تكلفة المشوار نفسه.</Txt>
+      {hasPair && advice.two !== null && <PlanLines title="مشوارين" plan={advice.two} />}
+      {hasPair && <Txt kind="label">{driveLine(advice)}</Txt>}
+      <Txt kind="label">الحساب على العروض المحفوظة بس.</Txt>
     </Tile>
   );
 }
