@@ -19,6 +19,7 @@ import { toDateKey } from '@/domain/week';
 import { useStore } from '@/store/store';
 
 import { FundTile } from '../FundTile';
+import { RunningLowTile } from './RunningLowTile';
 
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
 
@@ -57,6 +58,7 @@ export function Pantry() {
         <Button kind="primary" label="أضف صنف للمخزن" onPress={() => setIsAdding(true)} />
       </Tile>
 
+      <RunningLowTile />
       <FundTile kind="pantry" />
 
       {groups.map((group) => (

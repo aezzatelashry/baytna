@@ -1,6 +1,36 @@
 import { describe, expect, test } from 'vitest';
 
-import { daysLeft, isRunningLow, restock, summarizePantry, weeklyShare, type Staple } from './pantry';
+import {
+  daysLeft,
+  isRunningLow,
+  restock,
+  runningLow,
+  stapleCategory,
+  summarizePantry,
+  weeklyShare,
+  type Staple,
+} from './pantry';
+
+describe('running low', () => {
+  test('lists the staples about to run out, the soonest first', () => {
+    const low = runningLow(
+      [
+        staple({ id: 'far', boughtOn: '2026-11-01', lifeDays: 60 }),
+        staple({ id: 'soon', boughtOn: '2026-11-01', lifeDays: 18 }),
+        staple({ id: 'gone', boughtOn: '2026-10-01', lifeDays: 30 }),
+        staple({ id: 'unknown', lifeDays: null }),
+      ],
+      '2026-11-15',
+    );
+
+    expect(low.map((each) => each.id)).toEqual(['gone', 'soon']);
+  });
+
+  test('puts cleaning things under household and the rest under groceries', () => {
+    expect(stapleCategory('cleaning')).toBe('household');
+    expect(stapleCategory('grains')).toBe('pantry');
+  });
+});
 
 function staple(overrides: Partial<Staple>): Staple {
   return { id: 's', name: 'رز', kind: 'grains', price: 60, boughtOn: '2026-10-01', lifeDays: null, ...overrides };

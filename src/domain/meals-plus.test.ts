@@ -1,8 +1,27 @@
 import { describe, expect, test } from 'vitest';
 
-import { estimateMealCost, generateWeekPlan } from './meals';
+import { estimateMealCost, generateWeekPlan, LEFTOVERS_ID, withLeftoversDay } from './meals';
 import type { Meal } from './types';
 import { youtubeThumbnailUrl, youtubeVideoId, youtubeWatchUrl } from './youtube';
+
+describe('leftovers day', () => {
+  const days = ['2026-11-14', '2026-11-15', '2026-11-16'];
+
+  test('holds the lunch of the chosen day for leftovers', () => {
+    expect(withLeftoversDay([], days, 1)).toEqual([{ date: '2026-11-15', slot: 'lunch', mealId: LEFTOVERS_ID }]);
+  });
+
+  test('leaves a lunch the family locked on that day alone', () => {
+    const locked = [{ date: '2026-11-15', slot: 'lunch' as const, mealId: 'kabsa' }];
+
+    expect(withLeftoversDay(locked, days, 1)).toBe(locked);
+  });
+
+  test('adds nothing when no day is chosen or the day is outside the week', () => {
+    expect(withLeftoversDay([], days, null)).toEqual([]);
+    expect(withLeftoversDay([], days, 5)).toEqual([]);
+  });
+});
 
 function meal(overrides: Partial<Meal>): Meal {
   return { id: 'm', name: 'وجبة', slots: ['lunch'], protein: 'none', tags: [], ingredients: [], ...overrides };

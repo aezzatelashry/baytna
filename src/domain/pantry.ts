@@ -1,3 +1,4 @@
+import type { Category } from './types';
 import { fromDateKey } from './week';
 
 /** Kinds of things that are bought once and last for weeks. */
@@ -63,6 +64,18 @@ export function daysLeft(staple: Staple, today: string): number | null {
 export function isRunningLow(staple: Staple, today: string): boolean {
   const left = daysLeft(staple, today);
   return left !== null && left <= RUNNING_LOW_DAYS;
+}
+
+/** The staples expected to run out within the warning window, the soonest first. */
+export function runningLow(staples: readonly Staple[], today: string): Staple[] {
+  return staples
+    .filter((staple) => isRunningLow(staple, today))
+    .sort((a, b) => (daysLeft(a, today) ?? 0) - (daysLeft(b, today) ?? 0));
+}
+
+/** Where a staple goes on the weekly shopping list. */
+export function stapleCategory(kind: StapleKind): Category {
+  return kind === 'cleaning' ? 'household' : 'pantry';
 }
 
 export interface PantrySummary {

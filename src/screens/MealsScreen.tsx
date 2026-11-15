@@ -16,7 +16,7 @@ import { currentWeekStart, findMeal, useStore } from '@/store/store';
 import { CookFromHave } from './meals/CookFromHave';
 import { MealSheet } from './meals/MealSheet';
 import { NewMealSheet } from './meals/NewMealSheet';
-import { RhythmPicker, SharedIngredients } from './meals/WeekExtras';
+import { GuestsPicker, LeftoversPicker, RhythmPicker, SharedIngredients } from './meals/WeekExtras';
 import { WorkBox } from './meals/WorkBox';
 
 const CART_ICON: IconName = { ios: 'cart.badge.plus', android: 'add_shopping_cart', web: 'add_shopping_cart' };
@@ -111,6 +111,8 @@ export function MealsScreen({ isAddingMeal, onCloseAddMeal, onWorkView }: MealsS
 
       {view === 'home' && hasPlan && <SharedIngredients meals={weekMeals} />}
       {view === 'home' && <RhythmPicker />}
+      {view === 'home' && <LeftoversPicker days={days} />}
+      {view === 'home' && <GuestsPicker />}
       {view === 'home' && <OurMeals />}
       {view === 'home' && <Sweets />}
       <NewMealSheet isOpen={isAddingMeal} onClose={onCloseAddMeal} />
@@ -259,7 +261,9 @@ function MealSlotRow({ date, slot, onOpen }: MealSlotRowProps) {
         {isFavorite && <Icon name={STAR_ICON} color={palette.accent} size={BADGE_SIZE} />}
         {isLocked && <Icon name={LOCK_ICON} color={palette.brand} size={BADGE_SIZE} />}
       </Pressable>
-      <IconButton icon={CART_ICON} label={`أضف مكونات ${meal.name} للقائمة`} onPress={handleAdd} />
+      {meal.ingredients.length > 0 && (
+        <IconButton icon={CART_ICON} label={`أضف مكونات ${meal.name} للقائمة`} onPress={handleAdd} />
+      )}
     </View>
   );
 }

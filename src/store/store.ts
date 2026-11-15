@@ -7,7 +7,17 @@ import { withMeta } from '@/data/meal-meta';
 import { mealById, SEED_MEALS } from '@/data/seed-meals';
 import { MAX_NOTES, type AssistantAction } from '@/domain/assistant';
 import { lookupPrice, normalizeName, recordPrice } from '@/domain/budget';
-import { DEFAULT_RHYTHM, generateWeekPlan, missingIngredients, styleSequence, type Rhythm } from '@/domain/meals';
+import { guestFactor, guestsThisWeek, scaleForGuests, type GuestWeek } from '@/domain/guests';
+import {
+  DEFAULT_RHYTHM,
+  generateWeekPlan,
+  LEFTOVERS_ID,
+  LEFTOVERS_MEAL,
+  missingIngredients,
+  styleSequence,
+  withLeftoversDay,
+  type Rhythm,
+} from '@/domain/meals';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
@@ -52,6 +62,7 @@ export function allMeals(custom: readonly Meal[]): Meal[] {
 }
 
 export function findMeal(id: string, custom: readonly Meal[]): Meal | undefined {
+  if (id === LEFTOVERS_ID) return LEFTOVERS_MEAL;
   const builtIn = mealById(id);
   return builtIn ? withMeta(builtIn) : custom.find((meal) => meal.id === id);
 }
@@ -111,6 +122,10 @@ interface State {
   /** Preferences the assistant was asked to remember. Local to this phone. */
   readonly notes: readonly string[];
   readonly planOffset: number;
+  /** The day of the week (by its index) whose lunch is leftovers in the next plan. Null means none. */
+  readonly leftoversDay: number | null;
+  /** Extra people eating with the family this week. Scales what a meal puts on the list. */
+  readonly guests: GuestWeek | null;
   readonly household: HouseholdLink | null;
   readonly lastPushedAt: string;
   readonly lastPulledAt: string;
@@ -180,6 +195,9 @@ interface Actions {
   removeOffer: (id: string) => void;
   forgetNote: (note: string) => void;
   generatePlan: () => void;
+  setLeftoversDay: (dayIndex: number | null) => void;
+  /** Sets how many guests eat with the family this week. Zero clears it. */
+  setGuests: (count: number) => void;
   togglePlanLock: (date: string, slot: MealSlot) => void;
   /** Trades the meal in this slot with the same slot on another day. */
   moveMeal: (date: string, slot: MealSlot, toDate: string) => void;
@@ -271,6 +289,8 @@ export const useStore = create<Store>()(
       favorites: [],
       mealVideos: {},
       planOffset: 0,
+      leftoversDay: null,
+      guests: null,
       household: null,
       lastPushedAt: '',
       lastPulledAt: '',
@@ -478,7 +498,8 @@ export const useStore = create<Store>()(
         if (!meal) return 0;
         const weekStart = currentWeekStart(state.weekStartsOn);
         const weekItems = state.items.filter((item) => item.weekStart === weekStart);
-        const added = missingIngredients(meal, weekItems).map((ingredient) =>
+        const factor = guestFactor(state.members.length, guestsThisWeek(state.guests, weekStart));
+        const added = scaleForGuests(missingIngredients(meal, weekItems), factor).map((ingredient) =>
           buildItem({ ...ingredient, estPrice: null, mealId }, weekStart, state.myName, state.priceBook),
         );
         set({ items: [...state.items, ...added] });
@@ -528,13 +549,14 @@ export const useStore = create<Store>()(
           const stamp = now();
           const isKept = (entry: PlanEntry): boolean => !entry.deleted && entry.locked === true && days.includes(entry.date);
           const locked = state.plan.filter(isKept);
+          const held = withLeftoversDay(locked, days, state.leftoversDay);
           const retired = state.plan.map((entry) =>
             days.includes(entry.date) && !entry.deleted && !isKept(entry)
               ? { ...entry, deleted: true, updatedAt: stamp }
               : entry,
           );
           const fresh = generateWeekPlan(allMeals(state.customMeals), days, state.planOffset, {
-            locked,
+            locked: held,
             favorites: new Set(state.favorites),
             styles: styleSequence(state.rhythm, days.length),
           })
@@ -542,6 +564,10 @@ export const useStore = create<Store>()(
             .map((slot) => ({ ...slot, id: Crypto.randomUUID(), updatedAt: stamp, deleted: false }));
           return { plan: [...retired, ...fresh], planOffset: state.planOffset + 1 };
         }),
+
+      setLeftoversDay: (leftoversDay) => set({ leftoversDay }),
+      setGuests: (count) =>
+        set((state) => ({ guests: count > 0 ? { weekStart: currentWeekStart(state.weekStartsOn), count } : null })),
 
       togglePlanLock: (date, slot) =>
         set((state) => {

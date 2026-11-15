@@ -13,6 +13,7 @@ import { CATEGORY_LABELS, SLOT_LABELS, SLOTS } from '@/domain/types';
 import { dayName, toDateKey } from '@/domain/week';
 import { currentWeekStart, findMeal, useStore } from '@/store/store';
 
+import { RunningLowTile } from './list/RunningLowTile';
 import { WeekReportTile } from './today/WeekReportTile';
 
 const STATUS_LINES: Record<BudgetStatus, string> = {
@@ -106,6 +107,8 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
           </Txt>
         </Tile>
       )}
+
+      <RunningLowTile />
 
       {setAside > 0 && (
         <Tile>

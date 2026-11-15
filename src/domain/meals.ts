@@ -74,6 +74,33 @@ export interface PlanOptions {
   readonly styles?: readonly MealStyle[];
 }
 
+export const LEFTOVERS_ID = 'leftovers';
+
+/** A lunch with nothing to buy: the family eats what the week left in the fridge. */
+export const LEFTOVERS_MEAL: Meal = {
+  id: LEFTOVERS_ID,
+  name: 'يوم البواقي',
+  slots: ['lunch'],
+  protein: 'none',
+  tags: [],
+  ingredients: [],
+};
+
+/**
+ * Holds the lunch of the chosen day (by its index in the week) for leftovers,
+ * unless the family already locked a lunch there.
+ */
+export function withLeftoversDay(
+  locked: readonly PlannedSlot[],
+  days: readonly string[],
+  dayIndex: number | null,
+): readonly PlannedSlot[] {
+  const date = dayIndex === null ? undefined : days[dayIndex];
+  if (date === undefined) return locked;
+  if (locked.some((slot) => slot.date === date && slot.slot === 'lunch')) return locked;
+  return [...locked, { date, slot: 'lunch', mealId: LEFTOVERS_ID }];
+}
+
 /** How many lunches of each style the family wants in a week. */
 export interface Rhythm {
   readonly light: number;
