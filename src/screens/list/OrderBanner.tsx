@@ -56,7 +56,7 @@ export function OrderBanner({ items }: OrderBannerProps) {
   return (
     <Tile>
       <Txt kind="title">{STATUS_TITLES[status]}</Txt>
-      {status === 'draft' && <Txt>{toBuy} صنف جاهزين. لما تخلص ابعتها، وأي إضافة بعدها تتعلّم "مستعجل".</Txt>}
+      {status === 'draft' && <Txt>{`${toBuy} صنف جاهزين. لما تخلص ابعتها، وأي إضافة بعدها تتعلّم "مستعجل".`}</Txt>}
       {status === 'sent' && <Txt>{toBuy} صنف مستنيين المشوار.</Txt>}
       {status === 'shopping' && (
         <Txt>

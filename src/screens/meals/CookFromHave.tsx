@@ -61,13 +61,13 @@ export function CookFromHave() {
         {staples.length > 0 && (
           <Chip label="احسب اللي في المخزن كمان" selected={isPantryCounted} onPress={() => setIsPantryCounted(!isPantryCounted)} />
         )}
-        <Txt kind="label">المطابقة بالكلمة الأساسية: لو كتبت "جبنة" بتتحسب لأي نوع جبنة.</Txt>
+        <Txt kind="label">{'المطابقة بالكلمة الأساسية: لو كتبت "جبنة" بتتحسب لأي نوع جبنة.'}</Txt>
       </Tile>
 
       {text.trim() !== '' && ideas.length === 0 && (
         <Tile>
           <Txt kind="title">مفيش أكلة قريبة</Txt>
-          <Txt>اللي كتبته ما بيكمّلش أكلة من أكلاتكم. جرّب تكتب مكونات أكتر، أو ضيف أكلة جديدة من "أكل البيت".</Txt>
+          <Txt>{'اللي كتبته ما بيكمّلش أكلة من أكلاتكم. جرّب تكتب مكونات أكتر، أو ضيف أكلة جديدة من "أكل البيت".'}</Txt>
         </Tile>
       )}
       <Ideas title="تتعمل دلوقتي" ideas={ready} />

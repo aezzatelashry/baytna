@@ -8,6 +8,7 @@
  */
 import '@/global.css';
 
+import { useSyncExternalStore } from 'react';
 import {
   I18nManager,
   Platform,
@@ -103,10 +104,26 @@ const dark: Palette = {
 
 export const Palettes = { light, dark } as const;
 
+const subscribeToNothing = (): (() => void) => () => undefined;
+
+/**
+ * The system's light or dark setting. On the web the server cannot know it, so the
+ * first render says light on both sides and the real value arrives right after.
+ */
+function useSystemScheme(): 'light' | 'dark' {
+  const isHydrated = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
+  const system = useColorScheme();
+  return isHydrated && system === 'dark' ? 'dark' : 'light';
+}
+
 /** The palette for this phone: the owner's choice in settings, else the system's. */
 export function usePalette(): Palette {
   const mode = useStore((state) => state.themeMode);
-  const system = useColorScheme();
+  const system = useSystemScheme();
   const scheme = mode === 'auto' ? (system === 'dark' ? 'dark' : 'light') : mode;
   return Palettes[scheme];
 }

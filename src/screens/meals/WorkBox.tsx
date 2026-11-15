@@ -238,7 +238,7 @@ function Suspects() {
   return (
     <Tile>
       <Txt kind="title">ملاحظة من يومياتك</Txt>
-      <Txt>المكونات دي اتكررت مع "انتفاخ" 3 مرات أو أكتر. ده من تسجيلك إنت، مش تشخيص.</Txt>
+      <Txt>{'المكونات دي اتكررت مع "انتفاخ" 3 مرات أو أكتر. ده من تسجيلك إنت، مش تشخيص.'}</Txt>
       {suspects.map((name) => (
         <View key={name} style={styles.row}>
           <Txt kind="strong" style={styles.grow}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -69,13 +69,12 @@ function useHouseholdSync(): string {
 
 /** True once the saved state has been read back from the phone's storage. */
 function useHydrated(): boolean {
-  // Starts false everywhere so the web's server render and first client render agree.
-  const [isHydrated, setIsHydrated] = useState(false);
-  useEffect(() => {
-    if (useStore.persist.hasHydrated()) setIsHydrated(true);
-    return useStore.persist.onFinishHydration(() => setIsHydrated(true));
-  }, []);
-  return isHydrated;
+  // The server snapshot is false, so the web's server render and first client render agree.
+  return useSyncExternalStore(
+    (onChange) => useStore.persist.onFinishHydration(onChange),
+    () => useStore.persist.hasHydrated(),
+    () => false,
+  );
 }
 
 export default function Home() {
