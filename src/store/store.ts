@@ -129,6 +129,10 @@ interface State {
   readonly colorTheme: ColorTheme;
   /** When on, the app asks for the phone's fingerprint or face before it opens. */
   readonly appLock: boolean;
+  /** When on, the phone reminds on the last day of an offer on the list and of something fresh. */
+  readonly reminders: boolean;
+  /** Barcodes the family scanned, with the name they gave the product. Kept on this phone. */
+  readonly barcodes: Readonly<Record<string, string>>;
   /** Fresh things bought lately, so the ones about to go off are eaten first. */
   readonly fresh: readonly FreshItem[];
   /** The family's own photo of a meal, as a file address keyed by meal id. Local to this phone. */
@@ -218,6 +222,8 @@ interface Actions {
   setThemeMode: (mode: ThemeMode) => void;
   setColorTheme: (theme: ColorTheme) => void;
   setAppLock: (isOn: boolean) => void;
+  setReminders: (isOn: boolean) => void;
+  rememberBarcode: (code: string, name: string) => void;
   /** It was eaten or thrown away: off the fresh shelf. */
   removeFresh: (id: string) => void;
   restoreFresh: (item: FreshItem) => void;
@@ -374,6 +380,8 @@ export const useStore = create<Store>()(
       themeMode: 'auto',
       colorTheme: DEFAULT_COLOR_THEME,
       appLock: false,
+      reminders: false,
+      barcodes: {},
       fresh: [],
       mealPhotos: {},
       itemPhotos: {},
@@ -432,6 +440,9 @@ export const useStore = create<Store>()(
       setThemeMode: (themeMode) => set({ themeMode }),
       setColorTheme: (colorTheme) => set({ colorTheme }),
       setAppLock: (appLock) => set({ appLock }),
+      setReminders: (reminders) => set({ reminders }),
+      rememberBarcode: (code, name) =>
+        set((state) => (name.trim() === '' ? state : { barcodes: { ...state.barcodes, [code]: name.trim() } })),
       removeFresh: (id) => set((state) => ({ fresh: state.fresh.filter((item) => item.id !== id) })),
       restoreFresh: (item) =>
         set((state) => (state.fresh.some((kept) => kept.id === item.id) ? state : { fresh: [...state.fresh, item] })),

@@ -2,7 +2,7 @@
   "expo": {
     "name": "بيتنا",
     "slug": "ahmed-ezzat",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "baytna",
@@ -43,7 +43,15 @@
           "microphonePermission": false
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "بيتنا بيستخدم الكاميرا عشان تمسحوا باركود الصنف.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -9,6 +9,7 @@ import { ROLE_LABELS, ROLES } from '@/domain/orders';
 import { COMMON_AVOIDS, DIET_TAG_LABELS, type DietTag, type Member, type ThemeMode } from '@/domain/types';
 import { useStore } from '@/store/store';
 import { LockBlock } from '@/screens/settings/LockBlock';
+import { RemindersBlock } from '@/screens/settings/RemindersBlock';
 import { SyncBlock } from '@/screens/settings/SyncBlock';
 
 const DIET_TAGS = Object.keys(DIET_TAG_LABELS) as DietTag[];
@@ -111,6 +112,7 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
       </View>
 
       <LockBlock />
+      <RemindersBlock />
 
       <View style={styles.block}>
         <Txt kind="title">أفراد البيت والممنوعات</Txt>

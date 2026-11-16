@@ -6,6 +6,7 @@ import Swipeable, { SwipeDirection, type SwipeableMethods } from 'react-native-g
 import { Button, Chip, Field, Icon, IconButton, Row, Sheet, Tile, Txt, type IconName } from '@/components/kit';
 import { showToast } from '@/components/toast';
 
+import { BarcodeScanner, type ScanResult } from './list/BarcodeScanner';
 import { ItemPhoto, useItemPhoto } from './list/ItemPhoto';
 import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
@@ -33,6 +34,8 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState<Category>('produce');
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const rememberBarcode = useStore((state) => state.rememberBarcode);
   const [openId, setOpenId] = useState<string | null>(null);
   const [view, setView] = useState<'week' | 'pantry'>('week');
   const styles = useStyles();
@@ -53,8 +56,15 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
   const handleAdd = (): void => {
     if (name.trim() === '') return;
     addItem({ name, qty: 1, unit: '', category, estPrice: parsePrice(price) });
+    // The name typed after a scan teaches the phone that barcode for next time.
+    if (scannedCode !== null) rememberBarcode(scannedCode, name);
+    setScannedCode(null);
     setName('');
     setPrice('');
+  };
+  const handleScanned = ({ code, name: found }: ScanResult): void => {
+    setScannedCode(code);
+    if (found !== null) setName(found);
   };
 
   return (
@@ -77,6 +87,7 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
           <Field label="الصنف" grow autoFocus value={name} onChangeText={setName} onSubmitEditing={handleAdd} returnKeyType="done" />
           <Field label="السعر المتوقع" value={price} onChangeText={setPrice} keyboardType="decimal-pad" style={styles.priceInput} />
         </View>
+        <BarcodeScanner onScanned={handleScanned} />
         <View style={styles.chips}>
           {CATEGORIES.map((key) => (
             <Chip key={key} label={CATEGORY_LABELS[key]} selected={category === key} onPress={() => setCategory(key)} />

@@ -14,6 +14,7 @@ import { OffersScreen } from '@/screens/OffersScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { useStore } from '@/store/store';
 import { refreshListOffersDaily } from '@/sync/list-offers';
+import { rescheduleReminders, showRemindersWhileOpen } from '@/sync/reminders';
 import { isSyncConfigured, subscribeToHousehold, syncNow } from '@/sync/sync';
 
 type TabKey = 'budget' | 'list' | 'offers' | 'assistant' | 'meals' | 'settings';
@@ -96,6 +97,30 @@ function useDailyOffers(isReady: boolean): void {
   }, [isReady]);
 }
 
+const REMINDER_DELAY_MS = 2000;
+
+/** Keeps the phone's scheduled reminders in step with the list, the offers and the fresh shelf. */
+function useReminders(isReady: boolean): void {
+  useEffect(() => {
+    if (!isReady) return undefined;
+    // A reminder that cannot be scheduled must never get in the way of using the app.
+    const run = (): void => void rescheduleReminders().catch(() => undefined);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = useStore.subscribe((state, previous) => {
+      const isSame = state.items === previous.items && state.offers === previous.offers && state.fresh === previous.fresh;
+      if (isSame) return;
+      clearTimeout(timer);
+      timer = setTimeout(run, REMINDER_DELAY_MS);
+    });
+    void showRemindersWhileOpen().catch(() => undefined);
+    run();
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [isReady]);
+}
+
 /** True once the saved state has been read back from the phone's storage. */
 function useHydrated(): boolean {
   // The server snapshot is false, so the web's server render and first client render agree.
@@ -119,6 +144,7 @@ export default function Home() {
   const fillFunds = useStore((state) => state.fillFunds);
   const isHydrated = useHydrated();
   useDailyOffers(isHydrated && hasOnboarded);
+  useReminders(isHydrated && hasOnboarded);
 
   // Each new week the set-aside funds get their weekly amount, once.
   useEffect(() => {
