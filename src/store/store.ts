@@ -23,6 +23,8 @@ import {
 } from '@/domain/meals';
 import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
 import { mergeRemoteOffers, type OfferStamps, type RemoteOffer } from '@/domain/offer-sync';
+import { applyFamilyWords } from '@/data/catalog';
+import type { FamilyWord } from '@/domain/catalog';
 import { isActive, offersFromElsewhere } from '@/domain/offers';
 import { mergeRemote, type RemoteChange, type Stamps } from '@/domain/stamped-sync';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
@@ -133,6 +135,8 @@ interface State {
   readonly reminders: boolean;
   /** Barcodes the family scanned, with the name they gave the product. Kept on this phone. */
   readonly barcodes: Readonly<Record<string, string>>;
+  /** Names and products the family added to the dictionary. Kept on this phone. */
+  readonly familyWords: readonly FamilyWord[];
   /** Fresh things bought lately, so the ones about to go off are eaten first. */
   readonly fresh: readonly FreshItem[];
   /** The family's own photo of a meal, as a file address keyed by meal id. Local to this phone. */
@@ -224,6 +228,8 @@ interface Actions {
   setAppLock: (isOn: boolean) => void;
   setReminders: (isOn: boolean) => void;
   rememberBarcode: (code: string, name: string) => void;
+  addFamilyWord: (word: FamilyWord) => void;
+  removeFamilyWord: (word: string) => void;
   /** It was eaten or thrown away: off the fresh shelf. */
   removeFresh: (id: string) => void;
   restoreFresh: (item: FreshItem) => void;
@@ -384,6 +390,7 @@ export const useStore = create<Store>()(
       appLock: false,
       reminders: false,
       barcodes: {},
+      familyWords: [],
       fresh: [],
       mealPhotos: {},
       itemPhotos: {},
@@ -443,6 +450,17 @@ export const useStore = create<Store>()(
       setColorTheme: (colorTheme) => set({ colorTheme }),
       setAppLock: (appLock) => set({ appLock }),
       setReminders: (reminders) => set({ reminders }),
+      addFamilyWord: (word) => {
+        const familyWords = [...get().familyWords.filter((kept) => kept.word.trim() !== word.word.trim()), word];
+        // The matchers read one shared dictionary, so it is rebuilt before anything renders with the new word.
+        applyFamilyWords(familyWords);
+        set({ familyWords });
+      },
+      removeFamilyWord: (word) => {
+        const familyWords = get().familyWords.filter((kept) => kept.word !== word);
+        applyFamilyWords(familyWords);
+        set({ familyWords });
+      },
       rememberBarcode: (code, name) =>
         set((state) => (name.trim() === '' ? state : { barcodes: { ...state.barcodes, [code]: name.trim() } })),
       removeFresh: (id) => set((state) => ({ fresh: state.fresh.filter((item) => item.id !== id) })),

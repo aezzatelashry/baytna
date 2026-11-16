@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fab, MicTab, Tab, type IconName } from '@/components/kit';
 import { showToast, Toast } from '@/components/toast';
 import { MaxContentWidth, RowDir, Rule, Spacing, themed } from '@/constants/theme';
+import { applyFamilyWords } from '@/data/catalog';
 import { AssistantScreen } from '@/screens/AssistantScreen';
 import { BudgetScreen } from '@/screens/BudgetScreen';
 import { ListScreen } from '@/screens/ListScreen';
@@ -154,6 +155,8 @@ export default function Home() {
   // Prices saved from another country's shop or an aggregator are cleared out, and the family is told.
   useEffect(() => {
     if (!isHydrated) return;
+    // The family's own words go into the dictionary before anything is matched against it.
+    applyFamilyWords(useStore.getState().familyWords);
     const removed = useStore.getState().removeOffersFromElsewhere();
     if (removed > 0) showToast(`اتمسح ${removed} عرض مش من المواقع الرسمية للمتاجر`);
   }, [isHydrated]);
