@@ -88,6 +88,26 @@ export function findMeal(id: string, custom: readonly Meal[]): Meal | undefined 
   return builtIn ? withMeta(builtIn) : custom.find((meal) => meal.id === id);
 }
 
+export type PhotoKind = 'item' | 'meal';
+
+export function photoStampKey(kind: PhotoKind, key: string): string {
+  return `${kind}:${key}`;
+}
+
+type PhotoState = Pick<State, 'itemPhotos' | 'mealPhotos' | 'photoStamps'>;
+
+/** Sets or takes away one photo and records when, without touching the others. */
+function withPhoto(state: PhotoState, kind: PhotoKind, key: string, uri: string | null, stamp: string): PhotoState {
+  const field = kind === 'item' ? 'itemPhotos' : 'mealPhotos';
+  const { [key]: _removed, ...rest } = state[field];
+  return {
+    itemPhotos: state.itemPhotos,
+    mealPhotos: state.mealPhotos,
+    [field]: uri === null ? rest : { ...rest, [key]: uri },
+    photoStamps: { ...state.photoStamps, [photoStampKey(kind, key)]: stamp },
+  };
+}
+
 export interface HouseholdLink {
   readonly id: string;
   readonly code: string;
@@ -113,6 +133,10 @@ interface State {
   readonly mealPhotos: Readonly<Record<string, string>>;
   /** "Get exactly this one": a photo per product, keyed by its normalized name so it returns every week. */
   readonly itemPhotos: Readonly<Record<string, string>>;
+  /** When each photo was last set or taken away on any phone, by "kind:key". Drives the photo sync. */
+  readonly photoStamps: Readonly<Record<string, string>>;
+  readonly photosPushedAt: string;
+  readonly photosPulledAt: string;
   /** False until the first-run welcome is finished or skipped. */
   readonly hasOnboarded: boolean;
   readonly members: readonly Member[];
@@ -184,6 +208,9 @@ interface Actions {
   /** Keeps the family's photo of a meal; null removes it. */
   setMealPhoto: (mealId: string, uri: string | null) => void;
   setItemPhoto: (itemName: string, uri: string | null) => void;
+  /** A photo that came from the other phone: stored with the time it was taken there, so it is not sent back. */
+  applyRemotePhoto: (kind: PhotoKind, key: string, uri: string | null, stamp: string) => void;
+  markPhotosSynced: (pushedAt: string, pulledAt: string) => void;
   finishOnboarding: () => void;
   addMember: (name: string) => void;
   removeMember: (id: string) => void;
@@ -320,6 +347,9 @@ export const useStore = create<Store>()(
       fresh: [],
       mealPhotos: {},
       itemPhotos: {},
+      photoStamps: {},
+      photosPushedAt: '',
+      photosPulledAt: '',
       hasOnboarded: false,
       members: [],
       items: [],
@@ -368,16 +398,10 @@ export const useStore = create<Store>()(
       adjustFresh: (id, change) =>
         set((state) => ({ fresh: state.fresh.map((item) => (item.id === id ? withShelfDays(item, change) : item)) })),
       setItemPhoto: (itemName, uri) =>
-        set((state) => {
-          const key = normalizeName(itemName);
-          const { [key]: _removed, ...rest } = state.itemPhotos;
-          return { itemPhotos: uri === null ? rest : { ...rest, [key]: uri } };
-        }),
-      setMealPhoto: (mealId, uri) =>
-        set((state) => {
-          const { [mealId]: _removed, ...rest } = state.mealPhotos;
-          return { mealPhotos: uri === null ? rest : { ...rest, [mealId]: uri } };
-        }),
+        set((state) => withPhoto(state, 'item', normalizeName(itemName), uri, now())),
+      setMealPhoto: (mealId, uri) => set((state) => withPhoto(state, 'meal', mealId, uri, now())),
+      applyRemotePhoto: (kind, key, uri, stamp) => set((state) => withPhoto(state, kind, key, uri, stamp)),
+      markPhotosSynced: (photosPushedAt, photosPulledAt) => set({ photosPushedAt, photosPulledAt }),
       finishOnboarding: () => set({ hasOnboarded: true }),
 
       addMember: (name) =>
@@ -713,7 +737,8 @@ export const useStore = create<Store>()(
           return { plan: [...state.plan, entry] };
         }),
 
-      setHousehold: (household) => set({ household, lastPushedAt: '', lastPulledAt: '' }),
+      setHousehold: (household) =>
+        set({ household, lastPushedAt: '', lastPulledAt: '', photosPushedAt: '', photosPulledAt: '' }),
       setHouseholdStatus: (status, isOwner) =>
         set((state) => (state.household ? { household: { ...state.household, status, isOwner } } : state)),
       mergeRemote: (items, plan, pulledAt) =>
