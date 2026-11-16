@@ -119,21 +119,125 @@ export async function askAssistant(
   return parseAssistantReply(await invokeAi('assistant', { message, history, context }), mealIds);
 }
 
-export async function createHousehold(): Promise<HouseholdLink> {
+const FAMILY_ERRORS: Record<string, string> = {
+  'unknown code': 'الكود غير صحيح',
+  'google sign-in required': 'ادخل بحساب جوجل الأول.',
+  'owner only': 'صاحب البيت بس اللي يقدر يعمل كده.',
+  'owner stays': 'صاحب البيت ما ينفعش يخرج من بيته.',
+};
+
+function familyError(message: string): Error {
+  return new Error(FAMILY_ERRORS[message] ?? 'الطلب ما اتنفّذش. اتأكد من النت وجرّب تاني.');
+}
+
+async function currentUserId(supabase: SupabaseClient): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const id = data.session?.user.id;
+  if (!id) throw new Error('ادخل بحساب جوجل الأول.');
+  return id;
+}
+
+/** The name the owner will see next to this phone's request. Not worth failing the join over. */
+async function sendMyName(supabase: SupabaseClient, householdId: string, name: string): Promise<void> {
+  if (name.trim() === '') return;
+  await supabase.rpc('set_my_name', { target_household: householdId, new_name: name });
+}
+
+export async function createHousehold(myName: string): Promise<HouseholdLink> {
   const supabase = getClient();
   await ensureSession(supabase);
   const { data, error } = await supabase.rpc('create_household');
-  if (error) throw new Error(error.message);
+  if (error) throw familyError(error.message);
   const row = Array.isArray(data) ? data[0] : data;
-  return { id: String(row.id), code: String(row.code) };
+  const id = String(row.id);
+  await sendMyName(supabase, id, myName);
+  return { id, code: String(row.code), status: 'member', isOwner: true };
 }
 
-export async function joinHousehold(code: string): Promise<HouseholdLink> {
+/** Asks to join. The link stays 'pending' until the owner says yes on their phone. */
+export async function joinHousehold(code: string, myName: string): Promise<HouseholdLink> {
   const supabase = getClient();
   await ensureSession(supabase);
   const { data, error } = await supabase.rpc('join_household', { join_code: code });
-  if (error) throw new Error(error.message === 'unknown code' ? 'الكود غير صحيح' : error.message);
-  return { id: String(data), code: code.trim().toUpperCase() };
+  if (error) throw familyError(error.message);
+  const id = String(data);
+  await sendMyName(supabase, id, myName);
+  const membership = await membershipOf(id);
+  return {
+    id,
+    code: code.trim().toUpperCase(),
+    status: membership.status === 'member' ? 'member' : 'pending',
+    isOwner: membership.isOwner,
+  };
+}
+
+export interface Membership {
+  /** 'none' when the request was turned down, the member was taken out, or they left. */
+  readonly status: 'pending' | 'member' | 'none';
+  readonly isOwner: boolean;
+}
+
+/** Where this phone's account stands in the household right now. */
+export async function membershipOf(householdId: string): Promise<Membership> {
+  const supabase = getClient();
+  const userId = await currentUserId(supabase);
+  const mine = await supabase
+    .from('household_members')
+    .select('status, removed_at')
+    .eq('household_id', householdId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (mine.error) throw new Error('تعذّر الوصول للبيت. اتأكد من النت.');
+  if (!mine.data || mine.data.removed_at !== null) return { status: 'none', isOwner: false };
+  // Only a member can read the household row, so someone still waiting simply gets nothing here.
+  const home = await supabase.from('households').select('owner_id').eq('id', householdId).maybeSingle();
+  return {
+    status: mine.data.status === 'member' ? 'member' : 'pending',
+    isOwner: home.data?.owner_id === userId,
+  };
+}
+
+export interface HouseholdPerson {
+  readonly userId: string;
+  readonly name: string;
+  readonly status: 'pending' | 'member';
+  readonly isMe: boolean;
+}
+
+/** The people in the household and those asking to join. The owner sees requests; members see members. */
+export async function householdPeople(householdId: string): Promise<HouseholdPerson[]> {
+  const supabase = getClient();
+  const userId = await currentUserId(supabase);
+  const { data, error } = await supabase
+    .from('household_members')
+    .select('user_id, display_name, status, joined_at')
+    .eq('household_id', householdId)
+    .is('removed_at', null)
+    .order('joined_at');
+  if (error) throw new Error('تعذّر تحميل أفراد البيت. اتأكد من النت.');
+  return (data ?? []).map((row) => ({
+    userId: String(row.user_id),
+    name: typeof row.display_name === 'string' ? row.display_name : '',
+    status: row.status === 'member' ? 'member' : 'pending',
+    isMe: row.user_id === userId,
+  }));
+}
+
+export async function approveMember(householdId: string, userId: string): Promise<void> {
+  const { error } = await getClient().rpc('approve_member', { target_household: householdId, target_user: userId });
+  if (error) throw familyError(error.message);
+}
+
+/** The owner turns a request down or takes a member out. */
+export async function removeMember(householdId: string, userId: string): Promise<void> {
+  const { error } = await getClient().rpc('remove_member', { target_household: householdId, target_user: userId });
+  if (error) throw familyError(error.message);
+}
+
+/** A member leaves, or someone waiting takes the request back. */
+export async function leaveHousehold(householdId: string): Promise<void> {
+  const { error } = await getClient().rpc('leave_household', { target_household: householdId });
+  if (error) throw familyError(error.message);
 }
 
 interface ItemRow {
@@ -200,6 +304,17 @@ async function runSync(): Promise<void> {
   const supabase = getClient();
   await ensureSession(supabase);
   const householdId = state.household.id;
+
+  // Someone still waiting has nothing to sync; each run asks whether the owner has answered.
+  if (state.household.status === 'pending') {
+    const membership = await membershipOf(householdId);
+    if (membership.status === 'none') {
+      state.setHousehold(null);
+      throw new Error('طلب الانضمام اترفض أو اتلغى.');
+    }
+    if (membership.status === 'pending') return;
+    state.setHouseholdStatus('member', membership.isOwner);
+  }
 
   const pushStamp = new Date().toISOString();
   const dirtyItems = state.items.filter((item) => item.updatedAt > state.lastPushedAt);

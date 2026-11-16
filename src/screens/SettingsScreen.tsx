@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Chip, Field, IconButton, Sheet, Tile, Txt, type IconName } from '@/components/kit';
@@ -9,8 +9,7 @@ import { ROLE_LABELS, ROLES } from '@/domain/orders';
 import { COMMON_AVOIDS, DIET_TAG_LABELS, type DietTag, type Member, type ThemeMode } from '@/domain/types';
 import { useStore } from '@/store/store';
 import { LockBlock } from '@/screens/settings/LockBlock';
-import { isGoogleConfigured, signInWithGoogle } from '@/sync/google-auth';
-import { createHousehold, isSyncConfigured, joinHousehold, signedInAccountName, syncNow } from '@/sync/sync';
+import { SyncBlock } from '@/screens/settings/SyncBlock';
 
 const DIET_TAGS = Object.keys(DIET_TAG_LABELS) as DietTag[];
 
@@ -202,97 +201,6 @@ function MemberTile({ member }: { member: Member }) {
         />
       )}
     </Tile>
-  );
-}
-
-function SyncBlock({ syncError }: SyncProps) {
-  const household = useStore((state) => state.household);
-  const setHousehold = useStore((state) => state.setHousehold);
-  const [code, setCode] = useState('');
-  const [isBusy, setIsBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [accountName, setAccountName] = useState('');
-
-  // The session outlives the screen: ask for it again whenever the screen opens.
-  useEffect(() => {
-    let isCurrent = true;
-    signedInAccountName()
-      .then((name) => {
-        if (!isCurrent || name === null) return;
-        setAccountName(name);
-        setIsSignedIn(true);
-      })
-      .catch(() => undefined);
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
-
-  const run = async (link: () => ReturnType<typeof createHousehold>): Promise<void> => {
-    setIsBusy(true);
-    setError('');
-    try {
-      setHousehold(await link());
-      await syncNow();
-    } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : 'حصل خطأ غير متوقع');
-    } finally {
-      setIsBusy(false);
-    }
-  };
-
-  if (!isSyncConfigured()) {
-    return (
-      <View style={styles.block}>
-        <Txt kind="title">المزامنة بين الموبايلين</Txt>
-        <Txt>النسخة دي شغالة على الموبايل ده بس. المزامنة بتتفعّل لما يتضاف عنوان ومفتاح Supabase وقت البناء.</Txt>
-      </View>
-    );
-  }
-
-  const needsGoogle = isGoogleConfigured() && !isSignedIn;
-  const handleGoogle = async (): Promise<void> => {
-    setIsBusy(true);
-    setError('');
-    try {
-      setAccountName(await signInWithGoogle());
-      setIsSignedIn(true);
-    } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : 'حصل خطأ غير متوقع');
-    } finally {
-      setIsBusy(false);
-    }
-  };
-
-  const shownError = error || syncError;
-
-  return (
-    <View style={styles.block}>
-      <Txt kind="title">المزامنة بين الموبايلين</Txt>
-      {household ? (
-        <>
-          <Txt>كود البيت، اكتبه على الموبايل التاني:</Txt>
-          <Txt kind="head">{household.code}</Txt>
-          <Button label="افصل الموبايل ده" onPress={() => setHousehold(null)} />
-        </>
-      ) : needsGoogle ? (
-        <>
-          <Txt>ادخل بحساب جوجل الأول، عشان البيت يفضل معاك لو غيّرت الموبايل.</Txt>
-          <Button kind="primary" label="ادخل بحساب جوجل" disabled={isBusy} onPress={() => void handleGoogle()} />
-        </>
-      ) : (
-        <>
-          {accountName !== '' && <Txt kind="label">داخل باسم {accountName}</Txt>}
-          <Button kind="primary" label="اعمل بيت جديد" disabled={isBusy} onPress={() => void run(createHousehold)} />
-          <View style={styles.inline}>
-            <Field label="أو اكتب كود البيت" grow value={code} onChangeText={setCode} autoCapitalize="characters" />
-            <Button label="انضم" disabled={isBusy || code.trim() === ''} onPress={() => void run(() => joinHousehold(code))} />
-          </View>
-        </>
-      )}
-      {shownError !== '' && <Txt kind="label">{shownError}</Txt>}
-    </View>
   );
 }
 

@@ -91,6 +91,10 @@ export function findMeal(id: string, custom: readonly Meal[]): Meal | undefined 
 export interface HouseholdLink {
   readonly id: string;
   readonly code: string;
+  /** 'pending' while the owner has not answered the request. Links saved before approval existed have none and count as members. */
+  readonly status?: 'pending' | 'member';
+  /** True on the phone of whoever created the household: only they approve or take people out. */
+  readonly isOwner?: boolean;
 }
 
 interface State {
@@ -258,6 +262,8 @@ interface Actions {
   setMealVideo: (mealId: string, videoId: string | null) => void;
   setPlanMeal: (date: string, slot: MealSlot, mealId: string) => void;
   setHousehold: (household: HouseholdLink | null) => void;
+  /** The owner's answer arrived: keeps the link and what was already synced. */
+  setHouseholdStatus: (status: 'pending' | 'member', isOwner: boolean) => void;
   mergeRemote: (items: readonly ListItem[], plan: readonly PlanEntry[], pulledAt: string) => void;
   markPushed: (at: string) => void;
 }
@@ -708,6 +714,8 @@ export const useStore = create<Store>()(
         }),
 
       setHousehold: (household) => set({ household, lastPushedAt: '', lastPulledAt: '' }),
+      setHouseholdStatus: (status, isOwner) =>
+        set((state) => (state.household ? { household: { ...state.household, status, isOwner } } : state)),
       mergeRemote: (items, plan, pulledAt) =>
         set((state) => ({
           items: mergeRows(state.items, items),
