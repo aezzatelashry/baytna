@@ -1,7 +1,8 @@
+import { changesSince, mergeRemote, type Stamps } from './stamped-sync';
 import type { Offer } from './types';
 
 /** When each offer was last added or taken away on any phone, by offer id. */
-export type OfferStamps = Readonly<Record<string, string>>;
+export type OfferStamps = Stamps;
 
 /** One offer as the household's shared store holds it. */
 export interface RemoteOffer {
@@ -19,17 +20,10 @@ export interface OfferChanges {
   readonly removedIds: readonly string[];
 }
 
-/**
- * What this phone has to send. An offer with no stamp was saved before sharing
- * existed, so it goes up once.
- */
+/** What this phone has to send. An offer with no stamp was saved before sharing existed, so it goes up once. */
 export function offerChanges(offers: readonly Offer[], stamps: OfferStamps, pushedAt: string): OfferChanges {
-  const isNew = (id: string): boolean => stamps[id] === undefined || stamps[id] > pushedAt;
-  const present = new Set(offers.map((offer) => offer.id));
-  return {
-    added: offers.filter((offer) => isNew(offer.id)),
-    removedIds: Object.keys(stamps).filter((id) => !present.has(id) && stamps[id] > pushedAt),
-  };
+  const { changed, removedIds } = changesSince(offers, stamps, pushedAt);
+  return { added: changed, removedIds };
 }
 
 export interface OfferMerge {
@@ -42,16 +36,10 @@ export interface OfferMerge {
  * offer taken away here after it was added there stays away.
  */
 export function mergeRemoteOffers(offers: readonly Offer[], stamps: OfferStamps, remote: readonly RemoteOffer[]): OfferMerge {
-  const byId = new Map(offers.map((offer) => [offer.id, offer]));
-  const nextStamps: Record<string, string> = { ...stamps };
-
-  for (const change of remote) {
-    const id = change.offer.id;
-    const mine = nextStamps[id];
-    if (mine !== undefined && mine >= change.stamp) continue;
-    if (change.deleted) byId.delete(id);
-    else byId.set(id, change.offer);
-    nextStamps[id] = change.stamp;
-  }
-  return { offers: [...byId.values()], stamps: nextStamps };
+  const merged = mergeRemote(
+    offers,
+    stamps,
+    remote.map((change) => ({ item: change.offer, deleted: change.deleted, stamp: change.stamp })),
+  );
+  return { offers: merged.items, stamps: merged.stamps };
 }

@@ -24,6 +24,7 @@ import {
 import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
 import { mergeRemoteOffers, type OfferStamps, type RemoteOffer } from '@/domain/offer-sync';
 import { isActive } from '@/domain/offers';
+import { mergeRemote, type RemoteChange, type Stamps } from '@/domain/stamped-sync';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
@@ -188,6 +189,10 @@ interface State {
   readonly profilePushed: string;
   /** Meals the family added themselves. Local to this phone for now. */
   readonly customMeals: readonly Meal[];
+  /** When each family dish was last changed or taken away on any phone. Drives the dish sync. */
+  readonly mealStamps: Stamps;
+  readonly mealsPushedAt: string;
+  readonly mealsPulledAt: string;
   readonly favorites: readonly string[];
   /** Meal id to YouTube video id. */
   readonly mealVideos: Readonly<Record<string, string>>;
@@ -288,6 +293,9 @@ interface Actions {
   /** Offers the other phone saved or took away, with the cursor for the next pull. */
   applyRemoteOffers: (remote: readonly RemoteOffer[], pulledAt: string) => void;
   markOffersPushed: (at: string) => void;
+  /** Family dishes the other phone added, changed or took away, with the cursor for the next pull. */
+  applyRemoteMeals: (remote: readonly RemoteChange<Meal>[], pulledAt: string) => void;
+  markMealsPushed: (at: string) => void;
   setAutoOffers: (isOn: boolean) => void;
   setOffersRefreshedOn: (day: string) => void;
   setOffersRefreshedAt: (at: string) => void;
@@ -405,6 +413,9 @@ export const useStore = create<Store>()(
       orders: {},
       profilePushed: '',
       customMeals: [],
+      mealStamps: {},
+      mealsPushedAt: '',
+      mealsPulledAt: '',
       favorites: [],
       mealVideos: {},
       planOffset: 0,
@@ -516,7 +527,16 @@ export const useStore = create<Store>()(
       updateCustomMeal: (id, meal) =>
         set((state) => ({
           customMeals: state.customMeals.map((kept) => (kept.id === id ? { ...meal, name: meal.name.trim(), id } : kept)),
+          mealStamps: { ...state.mealStamps, [id]: now() },
         })),
+      applyRemoteMeals: (remote, mealsPulledAt) =>
+        set((state) => {
+          // Nothing came in: only the cursor moves, so the list keeps its identity and nothing re-syncs.
+          if (remote.length === 0) return { mealsPulledAt };
+          const merged = mergeRemote(state.customMeals, state.mealStamps, remote);
+          return { customMeals: merged.items, mealStamps: merged.stamps, mealsPulledAt };
+        }),
+      markMealsPushed: (mealsPushedAt) => set({ mealsPushedAt }),
       removeStaple: (id) => set((state) => ({ staples: state.staples.filter((staple) => staple.id !== id) })),
       restoreStaple: (staple) =>
         set((state) => (state.staples.some((kept) => kept.id === staple.id) ? state : { staples: [...state.staples, staple] })),
@@ -753,13 +773,23 @@ export const useStore = create<Store>()(
       },
 
       addCustomMeal: (meal) =>
+        set((state) => {
+          const id = `custom-${Crypto.randomUUID()}`;
+          return {
+            customMeals: [...state.customMeals, { ...meal, name: meal.name.trim(), id }],
+            mealStamps: { ...state.mealStamps, [id]: now() },
+          };
+        }),
+      removeCustomMeal: (id) =>
         set((state) => ({
-          customMeals: [...state.customMeals, { ...meal, name: meal.name.trim(), id: `custom-${Crypto.randomUUID()}` }],
+          customMeals: state.customMeals.filter((meal) => meal.id !== id),
+          mealStamps: { ...state.mealStamps, [id]: now() },
         })),
-      removeCustomMeal: (id) => set((state) => ({ customMeals: state.customMeals.filter((meal) => meal.id !== id) })),
       restoreCustomMeal: (meal) =>
         set((state) =>
-          state.customMeals.some((kept) => kept.id === meal.id) ? state : { customMeals: [...state.customMeals, meal] },
+          state.customMeals.some((kept) => kept.id === meal.id)
+            ? state
+            : { customMeals: [...state.customMeals, meal], mealStamps: { ...state.mealStamps, [meal.id]: now() } },
         ),
       toggleFavorite: (mealId) =>
         set((state) => ({
@@ -793,6 +823,8 @@ export const useStore = create<Store>()(
           offersPushedAt: '',
           offersPulledAt: '',
           profilePushed: '',
+          mealsPushedAt: '',
+          mealsPulledAt: '',
         }),
       setHouseholdStatus: (status, isOwner) =>
         set((state) => (state.household ? { household: { ...state.household, status, isOwner } } : state)),

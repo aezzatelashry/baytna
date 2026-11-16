@@ -51,6 +51,7 @@ function useHouseholdSync(): string {
         state.items === previous.items &&
         state.plan === previous.plan &&
         state.offerStamps === previous.offerStamps &&
+        state.mealStamps === previous.mealStamps &&
         state.role === previous.role &&
         state.myName === previous.myName &&
         state.photoStamps === previous.photoStamps;

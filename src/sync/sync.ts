@@ -9,6 +9,7 @@ import { parsePlaces, type NearbyPlace } from '@/domain/places';
 import type { Category, ListItem, MealSlot, PlanEntry } from '@/domain/types';
 import { useStore, type HouseholdLink } from '@/store/store';
 
+import { syncMeals } from './meal-sync';
 import { syncOffers } from './offer-sync';
 import { moveOrder, syncOrders } from './order-sync';
 import { syncPhotos } from './photo-sync';
@@ -352,6 +353,8 @@ async function runSync(): Promise<void> {
 
   await syncOffers(supabase, householdId);
   await syncOrders(supabase, householdId);
+  // Dishes go before photos, so a dish's photo always finds its dish.
+  await syncMeals(supabase, householdId);
 
   // The list is already in step; a photo that fails to move is reported without undoing that.
   try {
@@ -380,6 +383,7 @@ export function subscribeToHousehold(householdId: string, onError: (message: str
     .on('postgres_changes', { event: '*', schema: 'public', table: 'photos', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'offers', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter }, pull)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_meals', filter }, pull)
     .subscribe();
   return () => {
     void supabase.removeChannel(channel);
