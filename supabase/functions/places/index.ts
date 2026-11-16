@@ -3,10 +3,6 @@
  * Uses Google's Places API (New) Text Search and the Routes API route matrix.
  * The Google key lives only here, as the secret GOOGLE_MAPS_API_KEY.
  *
- * NOT DEPLOYED AND NOT TESTED against the live APIs. Before first use, check against
- * the current Google docs: the field names under `currentOpeningHours`, and the shape
- * of the route matrix response. See docs/BOARD_PROMPT_PLACES_PANTRY.md, section 3.
- *
  * Deploy: supabase functions deploy places
  * Secret: supabase secrets set GOOGLE_MAPS_API_KEY=...
  */
@@ -59,7 +55,11 @@ async function google(url: string, fieldMask: string, body: unknown): Promise<un
     },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(`google ${response.status}`);
+  if (!response.ok) {
+    // Google's own error text names the cause (billing, quota, a disabled API). It never holds the key.
+    const detail = await response.text().catch(() => '');
+    throw new Error(`google ${response.status} ${detail.slice(0, 300)}`);
+  }
   return response.json();
 }
 
