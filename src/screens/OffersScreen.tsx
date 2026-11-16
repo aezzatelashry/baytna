@@ -10,6 +10,7 @@ import { toDateKey } from '@/domain/week';
 import { currentWeekStart, useStore } from '@/store/store';
 
 import { OfferCard } from './offers/OfferCard';
+import { FlyerReader } from './offers/FlyerReader';
 import { FundTile } from './FundTile';
 import { NearbyPlaces } from './offers/NearbyPlaces';
 import { OfferForm } from './offers/OfferForm';
@@ -56,6 +57,7 @@ export function OffersScreen({ isAdding, onCloseAdd }: OffersScreenProps) {
       <Txt kind="head">العروض</Txt>
 
       <PriceSearch />
+      <FlyerReader />
       <TripPlanTile items={toBuy} offers={active} />
       <NearbyPlaces />
       <Shops items={toBuy} />

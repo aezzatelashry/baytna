@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { parseAssistantReply, type AssistantReply } from '@/domain/assistant';
+import { parseFlyer, type FlyerReading } from '@/domain/flyer';
 import { parseFoundOffers, type FoundOffer } from '@/domain/offers';
 import { parsePlaces, type NearbyPlace } from '@/domain/places';
 import type { Category, ListItem, MealSlot, PlanEntry } from '@/domain/types';
@@ -67,6 +68,7 @@ const AI_ERRORS: Record<string, string> = {
   invalid_query: 'اكتب اسم الصنف من حرفين لـ 80 حرف.',
   invalid_message: 'الرسالة فاضية أو طويلة قوي.',
   invalid_place_query: 'اكتب نوع المكان اللي بتدوّر عليه.',
+  invalid_flyer: 'الصورة كبيرة قوي أو مش مقروءة. صوّرها تاني من قريب.',
   busy: 'الخدمة مشغولة دلوقتي. جرّب بعد دقيقة.',
 };
 
@@ -86,6 +88,11 @@ async function invokeAi(name: string, body: Record<string, unknown>): Promise<un
 /** Looks an item up on the web. Can take up to a minute. */
 export async function searchPrices(query: string): Promise<FoundOffer[]> {
   return parseFoundOffers(await invokeAi('price-search', { query }));
+}
+
+/** Sends a photo of an offers flyer to be read. The photo is not stored anywhere. */
+export async function readFlyer(image: string, mediaType: string, today: string): Promise<FlyerReading> {
+  return parseFlyer(await invokeAi('flyer', { image, mediaType, today }));
 }
 
 /** Grocery shops around a point, with the drive to each. Runs on the server with the Google key. */
