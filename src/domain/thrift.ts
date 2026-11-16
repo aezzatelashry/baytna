@@ -86,6 +86,53 @@ export function weekReport(
   };
 }
 
+export interface MonthReport {
+  /** Weeks in the period in which something was bought. */
+  readonly weeks: number;
+  readonly spent: number;
+  /** The weekly budget times those weeks. */
+  readonly budgeted: number;
+  /** Positive when the family stayed under the budget, negative when over. */
+  readonly underBudget: number;
+  /** What was saved by paying less than the price expected when the item went on the list. */
+  readonly belowUsual: number;
+  readonly belowUsualCount: number;
+  readonly wasted: number;
+  readonly wastedCount: number;
+}
+
+/**
+ * The last weeks in one place, from what the family actually recorded: money paid,
+ * the budget for the weeks they shopped, what offers and cheaper finds took off the
+ * expected prices, and what went in the bin. `since` is the first week's start day.
+ */
+export function monthReport(
+  items: readonly ListItem[],
+  waste: readonly WasteEntry[],
+  weeklyBudget: number,
+  since: string,
+): MonthReport {
+  const bought = items.filter((item) => !item.deleted && item.bought && item.weekStart >= since);
+  const weeks = new Set(bought.map((item) => item.weekStart)).size;
+  const spent = round2(spentOn(bought));
+  const budgeted = round2(weeklyBudget * weeks);
+  const cheaper = bought.filter(
+    (item) => item.estPrice !== null && item.paidPrice !== null && item.paidPrice < item.estPrice,
+  );
+  const binned = waste.filter((entry) => entry.date >= since);
+
+  return {
+    weeks,
+    spent,
+    budgeted,
+    underBudget: round2(budgeted - spent),
+    belowUsual: round2(cheaper.reduce((sum, item) => sum + ((item.estPrice ?? 0) - (item.paidPrice ?? 0)), 0)),
+    belowUsualCount: cheaper.length,
+    wasted: round2(binned.reduce((sum, entry) => sum + entry.price, 0)),
+    wastedCount: binned.length,
+  };
+}
+
 /** A meal's known cost split between the people eating. Null when nobody is counted. */
 export function costPerPerson(knownCost: number, people: number): number | null {
   return people > 0 ? round2(knownCost / people) : null;

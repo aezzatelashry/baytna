@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { WORK_MEALS } from '../data/work-meals';
 import { DEFAULT_RHYTHM, generateWeekPlan, styleSequence } from './meals';
-import { costPerPerson, sharedIngredients, weekReport, type WasteEntry } from './thrift';
+import { costPerPerson, monthReport, sharedIngredients, weekReport, type WasteEntry } from './thrift';
 import type { ListItem, Meal, Member } from './types';
 import { homeBoxId, homeLunchForBox, homeMealIdOf, prepList } from './workbox';
 
@@ -153,6 +153,41 @@ describe('weekReport', () => {
     const report = weekReport([item({ bought: true, paidPrice: 90 })], [item({ bought: true, paidPrice: 70 })], []);
 
     expect(report.saved).toBe(-20);
+  });
+});
+
+describe('month report', () => {
+  const since = '2026-10-24';
+
+  test('adds up what was paid, the budget for the weeks shopped, and what came in under the expected price', () => {
+    const items = [
+      item({ id: 'a', weekStart: '2026-11-07', bought: true, estPrice: 40, paidPrice: 30 }),
+      item({ id: 'b', weekStart: '2026-11-14', bought: true, estPrice: 20, paidPrice: 25 }),
+      item({ id: 'c', weekStart: '2026-11-14', bought: true, estPrice: null, paidPrice: 15 }),
+    ];
+
+    const report = monthReport(items, [], 500, since);
+
+    expect(report).toMatchObject({ weeks: 2, spent: 70, budgeted: 1000, underBudget: 930, belowUsual: 10, belowUsualCount: 1 });
+  });
+
+  test('leaves out what is older than the period, not bought, or deleted', () => {
+    const items = [
+      item({ id: 'old', weekStart: '2026-10-17', bought: true, paidPrice: 99 }),
+      item({ id: 'waiting', weekStart: '2026-11-14', bought: false, estPrice: 50 }),
+      item({ id: 'gone', weekStart: '2026-11-14', bought: true, paidPrice: 50, deleted: true }),
+    ];
+
+    expect(monthReport(items, [], 500, since)).toMatchObject({ weeks: 0, spent: 0, budgeted: 0, belowUsual: 0 });
+  });
+
+  test('counts only the waste inside the period', () => {
+    const waste: WasteEntry[] = [
+      { id: '1', date: '2026-10-01', name: 'خس', price: 5 },
+      { id: '2', date: '2026-11-10', name: 'لبن', price: 8 },
+    ];
+
+    expect(monthReport([], waste, 500, since)).toMatchObject({ wasted: 8, wastedCount: 1 });
   });
 });
 

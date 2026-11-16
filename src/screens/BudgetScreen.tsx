@@ -16,6 +16,7 @@ import { currentWeekStart, findMeal, useStore } from '@/store/store';
 
 import { FreshTile } from './list/FreshTile';
 import { RunningLowTile } from './list/RunningLowTile';
+import { MonthReportTile } from './today/MonthReportTile';
 import { WeekReportTile } from './today/WeekReportTile';
 
 const STATUS_LINES: Record<BudgetStatus, string> = {
@@ -168,6 +169,7 @@ export function BudgetScreen({ onOpenSettings, onOpenList, onOpenMeals }: Budget
       )}
 
       <WeekReportTile />
+      <MonthReportTile />
 
       <Tile>
         <Txt kind="title">أكل النهارده</Txt>

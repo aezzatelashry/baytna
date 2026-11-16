@@ -107,6 +107,8 @@ interface State {
   readonly fresh: readonly FreshItem[];
   /** The family's own photo of a meal, as a file address keyed by meal id. Local to this phone. */
   readonly mealPhotos: Readonly<Record<string, string>>;
+  /** "Get exactly this one": a photo per product, keyed by its normalized name so it returns every week. */
+  readonly itemPhotos: Readonly<Record<string, string>>;
   /** False until the first-run welcome is finished or skipped. */
   readonly hasOnboarded: boolean;
   readonly members: readonly Member[];
@@ -177,6 +179,7 @@ interface Actions {
   adjustFresh: (id: string, change: number) => void;
   /** Keeps the family's photo of a meal; null removes it. */
   setMealPhoto: (mealId: string, uri: string | null) => void;
+  setItemPhoto: (itemName: string, uri: string | null) => void;
   finishOnboarding: () => void;
   addMember: (name: string) => void;
   removeMember: (id: string) => void;
@@ -310,6 +313,7 @@ export const useStore = create<Store>()(
       appLock: false,
       fresh: [],
       mealPhotos: {},
+      itemPhotos: {},
       hasOnboarded: false,
       members: [],
       items: [],
@@ -357,6 +361,12 @@ export const useStore = create<Store>()(
         set((state) => (state.fresh.some((kept) => kept.id === item.id) ? state : { fresh: [...state.fresh, item] })),
       adjustFresh: (id, change) =>
         set((state) => ({ fresh: state.fresh.map((item) => (item.id === id ? withShelfDays(item, change) : item)) })),
+      setItemPhoto: (itemName, uri) =>
+        set((state) => {
+          const key = normalizeName(itemName);
+          const { [key]: _removed, ...rest } = state.itemPhotos;
+          return { itemPhotos: uri === null ? rest : { ...rest, [key]: uri } };
+        }),
       setMealPhoto: (mealId, uri) =>
         set((state) => {
           const { [mealId]: _removed, ...rest } = state.mealPhotos;

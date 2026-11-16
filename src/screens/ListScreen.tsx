@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import Swipeable, { SwipeDirection, type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -5,6 +6,7 @@ import Swipeable, { SwipeDirection, type SwipeableMethods } from 'react-native-g
 import { Button, Chip, Field, Icon, IconButton, Row, Sheet, Tile, Txt, type IconName } from '@/components/kit';
 import { showToast } from '@/components/toast';
 
+import { ItemPhoto, useItemPhoto } from './list/ItemPhoto';
 import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
 import { MIN_TOUCH, Radius, RowDir, Rule, Spacing, themed, usePalette } from '@/constants/theme';
@@ -144,6 +146,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const clearNotFound = useStore((state) => state.clearNotFound);
   const offers = useStore((state) => state.offers);
   const priceBook = useStore((state) => state.priceBook);
+  const photo = useItemPhoto(item.name);
   const [substitute, setSubstitute] = useState(item.substitute ?? '');
   const styles = useStyles();
   const palette = usePalette();
@@ -230,6 +233,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
           accessibilityState={{ expanded: isOpen }}
           onPress={handlePressRow}
           style={styles.rowBody}>
+          {photo !== undefined && <Image source={{ uri: photo }} contentFit="cover" style={styles.itemThumb} />}
           <View style={styles.grow}>
             <Txt kind="strong" style={item.bought && styles.boughtName}>
               {item.name}
@@ -253,6 +257,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
 
       <Sheet isOpen={isOpen} onClose={onDone} title={item.name}>
         {quantity !== '' && <Txt kind="label">{quantity}</Txt>}
+        <ItemPhoto itemName={item.name} />
         {item.bought ? (
           <Txt>اتشترى بـ {priceLabel(item)}.</Txt>
         ) : (
@@ -313,6 +318,7 @@ const SWIPE_PRESS_GUARD_MS = 800;
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
 const SHARE_ICON: IconName = { ios: 'square.and.arrow.up', android: 'share', web: 'share' };
 const GROUP_ICON_SIZE = 20;
+const ITEM_THUMB_SIZE = 44;
 /** One picture per aisle, so the eye finds the section before it reads the word. */
 const CATEGORY_ICONS: Record<Category, IconName> = {
   protein: { ios: 'fish.fill', android: 'set_meal', web: 'set_meal' },
@@ -332,6 +338,7 @@ const useStyles = themed((c) => ({
   screen: { gap: Spacing.four },
   headRow: { flexDirection: RowDir, alignItems: 'center' },
   groupHead: { flexDirection: RowDir, alignItems: 'center', gap: Spacing.two },
+  itemThumb: { width: ITEM_THUMB_SIZE, height: ITEM_THUMB_SIZE, borderRadius: Radius.control },
   inline: { flexDirection: RowDir, gap: Spacing.two, alignItems: 'flex-end' },
   priceInput: { width: PRICE_FIELD_WIDTH },
   chips: { flexDirection: RowDir, flexWrap: 'wrap', gap: Spacing.two },
