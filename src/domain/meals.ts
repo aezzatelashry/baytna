@@ -77,6 +77,8 @@ export interface PlanOptions {
   readonly ratings?: Ratings;
   /** Fresh things about to go off: meals that use them up come before everything else. */
   readonly useUp?: readonly string[];
+  /** Products with a running offer: meals built on them come next, after the rescues. */
+  readonly onOffer?: readonly string[];
   /** The style wanted for each day's lunch, by day index. A wish, not a rule: protein comes first. */
   readonly styles?: readonly MealStyle[];
 }
@@ -143,7 +145,9 @@ export function generateWeekPlan(
   const used = new Map<MealSlot, number>();
   const plan: PlannedSlot[] = [];
   const favorites = options.favorites ?? new Set<string>();
-  const ordered = rescueFirst(rankByTaste(meals, favorites, options.ratings ?? {}), options.useUp ?? []);
+  // The same "these first" ordering twice: offers move up, then anything about to go off moves above them.
+  const byOffers = rescueFirst(rankByTaste(meals, favorites, options.ratings ?? {}), options.onOffer ?? []);
+  const ordered = rescueFirst(byOffers, options.useUp ?? []);
 
   days.forEach((date, dayIndex) => {
     const kept = (options.locked ?? []).filter((slot) => slot.date === date);

@@ -7,7 +7,9 @@ import { Button, Chip, Icon, IconButton, Tile, Txt, type IconName } from '@/comp
 import { showToast } from '@/components/toast';
 import { Font, MIN_TOUCH, Radius, RowDir, Rule, Size, Spacing, themed, usePalette } from '@/constants/theme';
 import { DESSERTS, type Dessert } from '@/data/desserts';
+import { formatSar } from '@/domain/budget';
 import { entryFor, membersExcludedFrom } from '@/domain/meals';
+import { mealCostWithOffers } from '@/domain/prices';
 import { SLOT_LABELS, SLOTS, type Meal, type MealSlot } from '@/domain/types';
 import { dayName, fromDateKey, toDateKey, weekDays } from '@/domain/week';
 import { youtubeThumbnailUrl } from '@/domain/youtube';
@@ -235,6 +237,9 @@ function MealSlotRow({ date, slot, onOpen }: MealSlotRowProps) {
   const customMeals = useStore((state) => state.customMeals);
   const favorites = useStore((state) => state.favorites);
   const mealVideos = useStore((state) => state.mealVideos);
+  const mealPhotos = useStore((state) => state.mealPhotos);
+  const priceBook = useStore((state) => state.priceBook);
+  const offers = useStore((state) => state.offers);
   const addMealToList = useStore((state) => state.addMealToList);
   const styles = useStyles();
   const palette = usePalette();
@@ -242,6 +247,10 @@ function MealSlotRow({ date, slot, onOpen }: MealSlotRowProps) {
   const entry = entryFor(plan, date, slot);
   const meal = entry ? findMeal(entry.mealId, customMeals) : undefined;
   if (!entry || !meal) return null;
+
+  // The family's own photo of the dish wins over the video still.
+  const photo = mealPhotos[meal.id];
+  const offerSaving = mealCostWithOffers(meal, priceBook, offers, toDateKey(new Date())).saving;
 
   const excluded = membersExcludedFrom(meal, members).map((member) => member.name);
   const videoId = mealVideos[meal.id];
@@ -261,12 +270,15 @@ function MealSlotRow({ date, slot, onOpen }: MealSlotRowProps) {
         accessibilityLabel={`${SLOT_LABELS[slot]}: ${meal.name}${state === '' ? '' : `، ${state}`}، افتح`}
         onPress={onOpen}
         style={styles.slotBody}>
-        {videoId !== undefined && (
-          <Image source={{ uri: youtubeThumbnailUrl(videoId) }} contentFit="cover" style={styles.thumb} />
+        {photo !== undefined ? (
+          <Image source={{ uri: photo }} contentFit="cover" style={styles.thumb} />
+        ) : (
+          videoId !== undefined && <Image source={{ uri: youtubeThumbnailUrl(videoId) }} contentFit="cover" style={styles.thumb} />
         )}
         <View style={styles.grow}>
           <Txt kind="label">{SLOT_LABELS[slot]}</Txt>
           <Txt kind="strong">{meal.name}</Txt>
+          {offerSaving > 0 && <Txt kind="label">عليها عروض بتوفّر {formatSar(offerSaving)} ريال</Txt>}
           {excluded.length > 0 && (
             <Txt kind="label" tone="tight">
               مش مناسبة لـ {excluded.join(' و')}

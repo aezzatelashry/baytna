@@ -34,6 +34,7 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [view, setView] = useState<'week' | 'pantry'>('week');
   const styles = useStyles();
+  const palette = usePalette();
 
   const weekStart = currentWeekStart(weekStartsOn);
   const items = allItems.filter((item) => item.weekStart === weekStart && !item.deleted);
@@ -92,7 +93,10 @@ export function ListScreen({ isAdding, onCloseAdd }: ListScreenProps) {
 
       {(view === 'week' ? groups : []).map((group) => (
         <View key={group.key}>
-          <Txt kind="title">{CATEGORY_LABELS[group.key]}</Txt>
+          <View style={styles.groupHead}>
+            <Icon name={CATEGORY_ICONS[group.key]} color={palette.brand} size={GROUP_ICON_SIZE} />
+            <Txt kind="title">{CATEGORY_LABELS[group.key]}</Txt>
+          </View>
           {group.rows.map((item) => (
             <ItemRow
               key={item.id}
@@ -308,6 +312,17 @@ const BUY_PANEL = SwipeDirection.LEFT;
 const SWIPE_PRESS_GUARD_MS = 800;
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
 const SHARE_ICON: IconName = { ios: 'square.and.arrow.up', android: 'share', web: 'share' };
+const GROUP_ICON_SIZE = 20;
+/** One picture per aisle, so the eye finds the section before it reads the word. */
+const CATEGORY_ICONS: Record<Category, IconName> = {
+  protein: { ios: 'fish.fill', android: 'set_meal', web: 'set_meal' },
+  produce: { ios: 'carrot.fill', android: 'eco', web: 'eco' },
+  fruit: { ios: 'leaf.fill', android: 'nutrition', web: 'nutrition' },
+  dairy: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
+  bakery: { ios: 'birthday.cake.fill', android: 'bakery_dining', web: 'bakery_dining' },
+  pantry: { ios: 'cabinet.fill', android: 'kitchen', web: 'kitchen' },
+  household: { ios: 'house.fill', android: 'cleaning_services', web: 'cleaning_services' },
+};
 const CHECK_SIZE = 28;
 const CHECK_ICON_SIZE = 18;
 const PRICE_FIELD_WIDTH = 120;
@@ -316,6 +331,7 @@ const CHECK_ICON: IconName = { ios: 'checkmark', android: 'check', web: 'check' 
 const useStyles = themed((c) => ({
   screen: { gap: Spacing.four },
   headRow: { flexDirection: RowDir, alignItems: 'center' },
+  groupHead: { flexDirection: RowDir, alignItems: 'center', gap: Spacing.two },
   inline: { flexDirection: RowDir, gap: Spacing.two, alignItems: 'flex-end' },
   priceInput: { width: PRICE_FIELD_WIDTH },
   chips: { flexDirection: RowDir, flexWrap: 'wrap', gap: Spacing.two },

@@ -22,6 +22,7 @@ import {
   type Rhythm,
 } from '@/domain/meals';
 import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
+import { isActive } from '@/domain/offers';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
 import { isUrgentWhenAdded, nextStatus, ROLES, type OrderEvent, type OrderStatus, type Role } from '@/domain/orders';
@@ -628,6 +629,7 @@ export const useStore = create<Store>()(
             favorites: new Set(state.favorites),
             ratings: state.ratings,
             useUp: expiringSoon(state.fresh, toDateKey(new Date())).map((item) => item.name),
+            onOffer: state.offers.filter((offer) => isActive(offer, toDateKey(new Date()))).map((offer) => offer.name),
             styles: styleSequence(state.rhythm, days.length),
           })
             .filter((slot) => !locked.some((kept) => kept.date === slot.date && kept.slot === slot.slot))

@@ -12,6 +12,7 @@ import {
   withShelfDays,
   type FreshItem,
 } from './fresh';
+import { generateWeekPlan } from './meals';
 import type { Meal } from './types';
 
 const item = (name: string, boughtOn: string, shelfDays: number): FreshItem => ({
@@ -94,6 +95,17 @@ describe('fresh shelf', () => {
 
     expect(rescueFirst(meals, ['طماطم']).map((each) => each.id)).toEqual(['سلطة', 'شكشوكة', 'رز', 'عدس']);
     expect(rescueFirst(meals, []).map((each) => each.id)).toEqual(['رز', 'سلطة', 'عدس', 'شكشوكة']);
+  });
+
+  test('a new plan serves the rescue first, then a meal on offer, then the rest', () => {
+    const meals = [meal('رز', 'أرز'), meal('سلطة', 'طماطم'), meal('عدس', 'عدس')];
+
+    const plan = generateWeekPlan(meals, ['2026-11-14', '2026-11-15', '2026-11-16'], 0, {
+      useUp: ['طماطم'],
+      onOffer: ['عدس'],
+    });
+
+    expect(plan.map((slot) => slot.mealId)).toEqual(['سلطة', 'عدس', 'رز']);
   });
 
   test('matches whole words, so one food is not mistaken for a longer name', () => {
