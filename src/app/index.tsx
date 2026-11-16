@@ -3,7 +3,7 @@ import { AppState, KeyboardAvoidingView, Platform, ScrollView, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fab, MicTab, Tab, type IconName } from '@/components/kit';
-import { Toast } from '@/components/toast';
+import { showToast, Toast } from '@/components/toast';
 import { MaxContentWidth, RowDir, Rule, Spacing, themed } from '@/constants/theme';
 import { AssistantScreen } from '@/screens/AssistantScreen';
 import { BudgetScreen } from '@/screens/BudgetScreen';
@@ -13,6 +13,7 @@ import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { OffersScreen } from '@/screens/OffersScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { useStore } from '@/store/store';
+import { refreshListOffersDaily } from '@/sync/list-offers';
 import { isSyncConfigured, subscribeToHousehold, syncNow } from '@/sync/sync';
 
 type TabKey = 'budget' | 'list' | 'offers' | 'assistant' | 'meals' | 'settings';
@@ -72,6 +73,26 @@ function useHouseholdSync(): string {
   return syncError;
 }
 
+/** Once a day, when the app opens or comes back, looks the list's products up for offers. */
+function useDailyOffers(isReady: boolean): void {
+  useEffect(() => {
+    if (!isReady) return undefined;
+    const run = (): void => {
+      refreshListOffersDaily()
+        .then((saved) => {
+          if (saved !== null && saved > 0) showToast(`اتحفظ ${saved} عرض جديد لأصناف قائمتك`);
+        })
+        // A failed lookup is silent here; the offers screen has the button and shows the reason.
+        .catch(() => undefined);
+    };
+    const appState = AppState.addEventListener('change', (status) => {
+      if (status === 'active') run();
+    });
+    run();
+    return () => appState.remove();
+  }, [isReady]);
+}
+
 /** True once the saved state has been read back from the phone's storage. */
 function useHydrated(): boolean {
   // The server snapshot is false, so the web's server render and first client render agree.
@@ -94,6 +115,7 @@ export default function Home() {
   const hasOnboarded = useStore((state) => state.hasOnboarded);
   const fillFunds = useStore((state) => state.fillFunds);
   const isHydrated = useHydrated();
+  useDailyOffers(isHydrated && hasOnboarded);
 
   // Each new week the set-aside funds get their weekly amount, once.
   useEffect(() => {

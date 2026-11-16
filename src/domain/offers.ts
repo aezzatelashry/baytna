@@ -12,6 +12,24 @@ export function isActive(offer: Offer, today: string): boolean {
   return offer.validUntil === null || offer.validUntil >= today;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whole days from today to the offer's last day. Null when the offer has no end date. */
+export function daysUntilEnd(validUntil: string | null, today: string): number | null {
+  if (validUntil === null) return null;
+  return Math.round((Date.parse(`${validUntil}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS);
+}
+
+/** When the offer ends, in words the family reads at a glance. */
+export function expiryLabel(validUntil: string | null, today: string): string {
+  const days = daysUntilEnd(validUntil, today);
+  if (days === null) return 'تاريخ الانتهاء مش مكتوب';
+  if (days < 0) return `انتهى يوم ${validUntil}`;
+  if (days === 0) return 'آخر يوم النهارده';
+  if (days === 1) return `ينتهي بكرة ${validUntil}`;
+  return `ينتهي ${validUntil}، باقي ${days} يوم`;
+}
+
 /**
  * An offer matches a list item when both names mean the same product in the
  * family's dictionary ("رز" and "أرز بسمتي 5 كجم"), not merely when one sits inside the other.

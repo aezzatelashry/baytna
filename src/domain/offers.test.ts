@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'vitest';
 
-import { adviseTrips, bestOffer, isActive, matchesItem, offerForItem, planTrips, unitPrice } from './offers';
+import {
+  adviseTrips,
+  bestOffer,
+  daysUntilEnd,
+  expiryLabel,
+  isActive,
+  matchesItem,
+  offerForItem,
+  planTrips,
+  unitPrice,
+} from './offers';
 import type { Offer } from './types';
 
 function offer(overrides: Partial<Offer>): Offer {
@@ -41,6 +51,26 @@ describe('offers', () => {
 
   test('returns no best offer when nothing matches', () => {
     expect(bestOffer('زيت', [offer({})])).toBeNull();
+  });
+});
+
+describe('when an offer ends', () => {
+  const today = '2026-11-16';
+
+  test('says how many days are left', () => {
+    expect(expiryLabel('2026-11-20', today)).toBe('ينتهي 2026-11-20، باقي 4 يوم');
+  });
+
+  test('calls out the last day and the day before', () => {
+    expect(expiryLabel('2026-11-16', today)).toBe('آخر يوم النهارده');
+    expect(expiryLabel('2026-11-17', today)).toBe('ينتهي بكرة 2026-11-17');
+  });
+
+  test('says plainly when the date is unknown or already past', () => {
+    expect(expiryLabel(null, today)).toBe('تاريخ الانتهاء مش مكتوب');
+    expect(expiryLabel('2026-11-10', today)).toBe('انتهى يوم 2026-11-10');
+    expect(daysUntilEnd(null, today)).toBeNull();
+    expect(daysUntilEnd('2026-11-10', today)).toBe(-6);
   });
 });
 

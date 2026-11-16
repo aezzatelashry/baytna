@@ -150,6 +150,12 @@ interface State {
   readonly offerStamps: OfferStamps;
   readonly offersPushedAt: string;
   readonly offersPulledAt: string;
+  /** Look the list's products up once a day when the app opens. Each lookup is a paid web search. */
+  readonly autoOffers: boolean;
+  /** The day the automatic lookup last ran on this phone, as a date key. */
+  readonly offersRefreshedOn: string;
+  /** When any lookup of the list's offers last finished on this phone, as an ISO timestamp. Empty before the first. */
+  readonly offersRefreshedAt: string;
   /** How many light, home and treat lunches the family wants in a week. */
   readonly rhythm: Rhythm;
   readonly waste: readonly WasteEntry[];
@@ -277,6 +283,9 @@ interface Actions {
   /** Offers the other phone saved or took away, with the cursor for the next pull. */
   applyRemoteOffers: (remote: readonly RemoteOffer[], pulledAt: string) => void;
   markOffersPushed: (at: string) => void;
+  setAutoOffers: (isOn: boolean) => void;
+  setOffersRefreshedOn: (day: string) => void;
+  setOffersRefreshedAt: (at: string) => void;
   forgetNote: (note: string) => void;
   generatePlan: () => void;
   setLeftoversDay: (dayIndex: number | null) => void;
@@ -367,6 +376,9 @@ export const useStore = create<Store>()(
       offerStamps: {},
       offersPushedAt: '',
       offersPulledAt: '',
+      autoOffers: true,
+      offersRefreshedOn: '',
+      offersRefreshedAt: '',
       notes: [],
       rhythm: DEFAULT_RHYTHM,
       waste: [],
@@ -673,6 +685,9 @@ export const useStore = create<Store>()(
           return { offers: merged.offers, offerStamps: merged.stamps, offersPulledAt };
         }),
       markOffersPushed: (offersPushedAt) => set({ offersPushedAt }),
+      setAutoOffers: (autoOffers) => set({ autoOffers }),
+      setOffersRefreshedOn: (offersRefreshedOn) => set({ offersRefreshedOn }),
+      setOffersRefreshedAt: (offersRefreshedAt) => set({ offersRefreshedAt }),
       forgetNote: (note) => set((state) => ({ notes: state.notes.filter((kept) => kept !== note) })),
 
       generatePlan: () =>

@@ -3,8 +3,9 @@ import { Linking, Share, View } from 'react-native';
 import { Button, IconButton, Txt, type IconName } from '@/components/kit';
 import { Radius, RowDir, Spacing, themed } from '@/constants/theme';
 import { formatSar } from '@/domain/budget';
-import { unitPrice, type FoundOffer } from '@/domain/offers';
+import { daysUntilEnd, expiryLabel, unitPrice, type FoundOffer } from '@/domain/offers';
 import { OFFER_KIND_LABELS } from '@/domain/types';
+import { toDateKey } from '@/domain/week';
 
 const SHARE_ICON: IconName = { ios: 'square.and.arrow.up', android: 'share', web: 'share' };
 const DELETE_ICON: IconName = { ios: 'trash', android: 'delete', web: 'delete' };
@@ -20,12 +21,18 @@ type OfferCardProps = {
 function details(offer: FoundOffer): string {
   const parts = [OFFER_KIND_LABELS[offer.kind]];
   if (offer.packQty > 1) parts.push(`${offer.packQty} حبة، الواحدة ${formatSar(unitPrice(offer))} ريال`);
-  if (offer.validUntil) parts.push(`لحد ${offer.validUntil}`);
   return parts.join('، ');
 }
 
+/** An offer on its last day or the day before is worth a trip today, so it is called out. */
+const ENDING_SOON_DAYS = 1;
+
 function shareText(offer: FoundOffer): string {
-  const lines = [`${offer.name} بـ ${formatSar(offer.price)} ريال في ${offer.store}`, details(offer)];
+  const lines = [
+    `${offer.name} بـ ${formatSar(offer.price)} ريال في ${offer.store}`,
+    details(offer),
+    expiryLabel(offer.validUntil, toDateKey(new Date())),
+  ];
   if (offer.sourceUrl) lines.push(offer.sourceUrl);
   return lines.join('\n');
 }
@@ -34,6 +41,9 @@ function shareText(offer: FoundOffer): string {
 export function OfferCard({ offer, onSave, onDelete }: OfferCardProps) {
   const styles = useStyles();
   const sourceUrl = offer.sourceUrl;
+  const today = toDateKey(new Date());
+  const daysLeft = daysUntilEnd(offer.validUntil, today);
+  const isEndingSoon = daysLeft !== null && daysLeft <= ENDING_SOON_DAYS;
   // Sharing can be dismissed or unsupported; neither is worth telling the user about.
   const handleShare = (): void => void Share.share({ message: shareText(offer) }).catch(() => undefined);
 
@@ -53,6 +63,9 @@ export function OfferCard({ offer, onSave, onDelete }: OfferCardProps) {
           </Txt>
         </View>
       </View>
+      <Txt kind="label" tone={isEndingSoon ? 'tight' : undefined}>
+        {expiryLabel(offer.validUntil, today)}
+      </Txt>
       <View style={styles.bottom}>
         <Txt kind="label" style={styles.grow}>
           {details(offer)}
