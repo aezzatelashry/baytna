@@ -22,6 +22,7 @@ import {
   type Rhythm,
 } from '@/domain/meals';
 import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
+import { mergeRemoteOffers, type OfferStamps, type RemoteOffer } from '@/domain/offer-sync';
 import { isActive } from '@/domain/offers';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
@@ -145,6 +146,10 @@ interface State {
   readonly priceBook: PriceBook;
   /** Prices seen at named shops. Local to this phone for now. */
   readonly offers: readonly Offer[];
+  /** When each offer was added or taken away on any phone. Drives the offer sync. */
+  readonly offerStamps: OfferStamps;
+  readonly offersPushedAt: string;
+  readonly offersPulledAt: string;
   /** How many light, home and treat lunches the family wants in a week. */
   readonly rhythm: Rhythm;
   readonly waste: readonly WasteEntry[];
@@ -269,6 +274,9 @@ interface Actions {
   applyAssistantActions: (actions: readonly AssistantAction[]) => void;
   addOffers: (offers: readonly NewOffer[]) => void;
   removeOffer: (id: string) => void;
+  /** Offers the other phone saved or took away, with the cursor for the next pull. */
+  applyRemoteOffers: (remote: readonly RemoteOffer[], pulledAt: string) => void;
+  markOffersPushed: (at: string) => void;
   forgetNote: (note: string) => void;
   generatePlan: () => void;
   setLeftoversDay: (dayIndex: number | null) => void;
@@ -356,6 +364,9 @@ export const useStore = create<Store>()(
       plan: [],
       priceBook: {},
       offers: [],
+      offerStamps: {},
+      offersPushedAt: '',
+      offersPulledAt: '',
       notes: [],
       rhythm: DEFAULT_RHYTHM,
       waste: [],
@@ -637,19 +648,31 @@ export const useStore = create<Store>()(
       },
 
       addOffers: (incoming) =>
+        set((state) => {
+          const stamp = now();
+          const added = incoming.map((offer) => ({
+            ...offer,
+            store: offer.store.trim(),
+            name: offer.name.trim(),
+            id: Crypto.randomUUID(),
+            addedAt: toDateKey(new Date()),
+          }));
+          const stamps = Object.fromEntries(added.map((offer) => [offer.id, stamp]));
+          return { offers: [...state.offers, ...added], offerStamps: { ...state.offerStamps, ...stamps } };
+        }),
+      removeOffer: (id) =>
         set((state) => ({
-          offers: [
-            ...state.offers,
-            ...incoming.map((offer) => ({
-              ...offer,
-              store: offer.store.trim(),
-              name: offer.name.trim(),
-              id: Crypto.randomUUID(),
-              addedAt: toDateKey(new Date()),
-            })),
-          ],
+          offers: state.offers.filter((offer) => offer.id !== id),
+          offerStamps: { ...state.offerStamps, [id]: now() },
         })),
-      removeOffer: (id) => set((state) => ({ offers: state.offers.filter((offer) => offer.id !== id) })),
+      applyRemoteOffers: (remote, offersPulledAt) =>
+        set((state) => {
+          // Nothing came in: only the cursor moves, so the lists keep their identity and nothing re-syncs.
+          if (remote.length === 0) return { offersPulledAt };
+          const merged = mergeRemoteOffers(state.offers, state.offerStamps, remote);
+          return { offers: merged.offers, offerStamps: merged.stamps, offersPulledAt };
+        }),
+      markOffersPushed: (offersPushedAt) => set({ offersPushedAt }),
       forgetNote: (note) => set((state) => ({ notes: state.notes.filter((kept) => kept !== note) })),
 
       generatePlan: () =>
@@ -738,7 +761,15 @@ export const useStore = create<Store>()(
         }),
 
       setHousehold: (household) =>
-        set({ household, lastPushedAt: '', lastPulledAt: '', photosPushedAt: '', photosPulledAt: '' }),
+        set({
+          household,
+          lastPushedAt: '',
+          lastPulledAt: '',
+          photosPushedAt: '',
+          photosPulledAt: '',
+          offersPushedAt: '',
+          offersPulledAt: '',
+        }),
       setHouseholdStatus: (status, isOwner) =>
         set((state) => (state.household ? { household: { ...state.household, status, isOwner } } : state)),
       mergeRemote: (items, plan, pulledAt) =>

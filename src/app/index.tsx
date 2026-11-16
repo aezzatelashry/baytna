@@ -46,7 +46,12 @@ function useHouseholdSync(): string {
     };
     let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribeStore = useStore.subscribe((state, previous) => {
-      if (state.items === previous.items && state.plan === previous.plan) return;
+      const isSame =
+        state.items === previous.items &&
+        state.plan === previous.plan &&
+        state.offerStamps === previous.offerStamps &&
+        state.photoStamps === previous.photoStamps;
+      if (isSame) return;
       clearTimeout(timer);
       timer = setTimeout(run, PUSH_DELAY_MS);
     });

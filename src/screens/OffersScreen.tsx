@@ -16,6 +16,7 @@ import { NearbyPlaces } from './offers/NearbyPlaces';
 import { OfferForm } from './offers/OfferForm';
 import { PriceSearch } from './offers/PriceSearch';
 import { Shops } from './offers/Shops';
+import { StoreOffers } from './offers/StoreOffers';
 import { TripPlanTile } from './offers/TripPlanTile';
 import { TripWorth } from './offers/TripWorth';
 
@@ -56,8 +57,9 @@ export function OffersScreen({ isAdding, onCloseAdd }: OffersScreenProps) {
     <View style={styles.screen}>
       <Txt kind="head">العروض</Txt>
 
-      <PriceSearch />
+      <StoreOffers items={toBuy} offers={active} />
       <FlyerReader />
+      <PriceSearch />
       <TripPlanTile items={toBuy} offers={active} />
       <NearbyPlaces />
       <Shops items={toBuy} />

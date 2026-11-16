@@ -8,6 +8,7 @@ import { parsePlaces, type NearbyPlace } from '@/domain/places';
 import type { Category, ListItem, MealSlot, PlanEntry } from '@/domain/types';
 import { useStore, type HouseholdLink } from '@/store/store';
 
+import { syncOffers } from './offer-sync';
 import { syncPhotos } from './photo-sync';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -344,6 +345,8 @@ async function runSync(): Promise<void> {
   const pulledAt = latestServerStamp([...itemRows, ...planRows], since);
   useStore.getState().mergeRemote(itemRows.map(rowToItem), planRows.map(rowToPlan), pulledAt);
 
+  await syncOffers(supabase, householdId);
+
   // The list is already in step; a photo that fails to move is reported without undoing that.
   try {
     await syncPhotos(supabase, householdId);
@@ -364,6 +367,7 @@ export function subscribeToHousehold(householdId: string, onError: (message: str
     .on('postgres_changes', { event: '*', schema: 'public', table: 'list_items', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_entries', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'photos', filter }, pull)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'offers', filter }, pull)
     .subscribe();
   return () => {
     void supabase.removeChannel(channel);
