@@ -2,7 +2,41 @@ import { describe, expect, test } from 'vitest';
 
 import { CATALOG } from '../data/catalog';
 
-import { arabicKey, findInCatalog, sameProduct } from './catalog';
+import { arabicKey, findInCatalog, sameProduct, withFamilyWords } from './catalog';
+
+describe('the family own words', () => {
+  const base = [
+    { id: 'rice', name: 'أرز', aliases: ['رز'], category: 'pantry' as const },
+    { id: 'milk', name: 'حليب', aliases: [], category: 'dairy' as const },
+  ];
+
+  test('adds another name to a product the dictionary knows', () => {
+    const catalog = withFamilyWords(base, [{ word: ' تمن ', productId: 'rice', kind: 'pantry' }]);
+
+    expect(sameProduct('تمن', 'أرز بسمتي 5 كجم', catalog)).toBe(true);
+    expect(catalog).toHaveLength(2);
+  });
+
+  test('adds a product of the family own', () => {
+    const catalog = withFamilyWords(base, [{ word: 'كشك', productId: null, kind: 'pantry' }]);
+
+    expect(findInCatalog('كشك بلدي', catalog)?.name).toBe('كشك');
+    expect(sameProduct('كشك', 'أرز', catalog)).toBe(false);
+  });
+
+  test('leaves the built-in dictionary untouched and skips empty words', () => {
+    const catalog = withFamilyWords(base, [{ word: '  ', productId: 'rice', kind: 'pantry' }]);
+
+    expect(catalog).toEqual(base);
+    expect(base[0].aliases).toEqual(['رز']);
+  });
+
+  test('keeps a word whose product is gone, as a product of its own', () => {
+    const catalog = withFamilyWords(base, [{ word: 'برغل', productId: 'removed', kind: 'pantry' }]);
+
+    expect(findInCatalog('برغل', catalog)?.name).toBe('برغل');
+  });
+});
 
 describe('arabicKey', () => {
   test('folds the spellings people mix', () => {

@@ -20,10 +20,19 @@ export function useItemPhoto(itemName: string): string | undefined {
 
 type ItemPhotoProps = {
   itemName: string;
+  /** What to say while there is no photo yet. */
+  hint?: string;
 };
 
+/** The key a substitute's photo is kept under: beside the item it stands in for, never in its place. */
+export function substituteKey(itemName: string): string {
+  return `بديل ${itemName}`;
+}
+
+const DEFAULT_HINT = 'صوّر النوع المطلوب بالظبط، عشان اللي يشتري يجيبه هو.';
+
 /** "Get exactly this one": a photo of the pack, so whoever shops picks the right brand and size. */
-export function ItemPhoto({ itemName }: ItemPhotoProps) {
+export function ItemPhoto({ itemName, hint = DEFAULT_HINT }: ItemPhotoProps) {
   const photo = useItemPhoto(itemName);
   const setItemPhoto = useStore((state) => state.setItemPhoto);
   const styles = useStyles();
@@ -42,7 +51,7 @@ export function ItemPhoto({ itemName }: ItemPhotoProps) {
       )}
       <View style={styles.row}>
         <Txt kind="label" style={styles.grow}>
-          {photo === undefined ? 'صوّر النوع المطلوب بالظبط، عشان اللي يشتري يجيبه هو.' : 'الصورة محفوظة على الموبايل ده بس.'}
+          {photo === undefined ? hint : 'الصورة محفوظة، وبتوصل للموبايل التاني مع المزامنة.'}
         </Txt>
         <IconButton icon={CAMERA_ICON} label={`صوّر ${itemName}`} onPress={() => void handlePick('camera')} />
         <IconButton icon={GALLERY_ICON} label={`اختار صورة ${itemName} من الاستوديو`} onPress={() => void handlePick('library')} />

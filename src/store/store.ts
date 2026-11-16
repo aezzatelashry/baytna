@@ -23,7 +23,7 @@ import {
 } from '@/domain/meals';
 import { expiringSoon, freshFromPurchase, withoutPurchase, withPurchase, withShelfDays, type FreshItem } from '@/domain/fresh';
 import { mergeRemoteOffers, type OfferStamps, type RemoteOffer } from '@/domain/offer-sync';
-import { isActive } from '@/domain/offers';
+import { isActive, offersFromElsewhere } from '@/domain/offers';
 import { mergeRemote, type RemoteChange, type Stamps } from '@/domain/stamped-sync';
 import { EMPTY_FUND, fillFund, spendFromFund, type Fund, type FundKind } from '@/domain/funds';
 import type { WasteEntry } from '@/domain/thrift';
@@ -296,6 +296,8 @@ interface Actions {
   applyAssistantActions: (actions: readonly AssistantAction[]) => void;
   addOffers: (offers: readonly NewOffer[]) => void;
   removeOffer: (id: string) => void;
+  /** Takes away saved web offers that did not come from a chain's own Saudi site. Returns how many went. */
+  removeOffersFromElsewhere: () => number;
   /** Offers the other phone saved or took away, with the cursor for the next pull. */
   applyRemoteOffers: (remote: readonly RemoteOffer[], pulledAt: string) => void;
   markOffersPushed: (at: string) => void;
@@ -716,6 +718,18 @@ export const useStore = create<Store>()(
           offers: state.offers.filter((offer) => offer.id !== id),
           offerStamps: { ...state.offerStamps, [id]: now() },
         })),
+      removeOffersFromElsewhere: () => {
+        const wrong = offersFromElsewhere(get().offers);
+        if (wrong.length === 0) return 0;
+        const ids = new Set(wrong.map((offer) => offer.id));
+        const stamp = now();
+        set((state) => ({
+          offers: state.offers.filter((offer) => !ids.has(offer.id)),
+          // Stamped like any removal, so the other phone drops them too.
+          offerStamps: { ...state.offerStamps, ...Object.fromEntries([...ids].map((id) => [id, stamp])) },
+        }));
+        return wrong.length;
+      },
       applyRemoteOffers: (remote, offersPulledAt) =>
         set((state) => {
           // Nothing came in: only the cursor moves, so the lists keep their identity and nothing re-syncs.

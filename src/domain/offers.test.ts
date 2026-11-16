@@ -8,6 +8,7 @@ import {
   isActive,
   matchesItem,
   offerForItem,
+  offersFromElsewhere,
   planTrips,
   unitPrice,
 } from './offers';
@@ -51,6 +52,31 @@ describe('offers', () => {
 
   test('returns no best offer when nothing matches', () => {
     expect(bestOffer('زيت', [offer({})])).toBeNull();
+  });
+});
+
+describe('offers that did not come from a chain own Saudi site', () => {
+  const saved = (id: string, sourceUrl: string | null): Offer => ({
+    id,
+    store: 'كارفور',
+    name: 'أرز',
+    price: 30,
+    packQty: 1,
+    kind: 'weekly',
+    validUntil: null,
+    sourceUrl,
+    addedAt: '2026-11-16',
+  });
+
+  test('picks out prices from another country or an aggregator, and leaves the rest', () => {
+    const offers = [
+      saved('saudi', 'https://www.carrefourksa.com/mafsau/ar/p/1'),
+      saved('egypt', 'https://www.carrefouregypt.com/mafegy/ar/p/1'),
+      saved('aggregator', 'https://d4donline.com/ar/saudi-arabia/riyadh/offers'),
+      saved('typed', null),
+    ];
+
+    expect(offersFromElsewhere(offers).map((offer) => offer.id)).toEqual(['egypt', 'aggregator']);
   });
 });
 

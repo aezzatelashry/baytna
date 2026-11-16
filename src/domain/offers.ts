@@ -1,4 +1,5 @@
 import { CATALOG } from '../data/catalog';
+import { officialStoreOf } from '../data/riyadh-stores';
 import { sameProduct } from './catalog';
 import type { Offer } from './types';
 
@@ -95,8 +96,11 @@ function toFoundOffer(value: unknown): FoundOffer | null {
   if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return null;
   if (kind !== 'daily' && kind !== 'weekly' && kind !== 'bulk') return null;
   if (typeof sourceUrl !== 'string' || !/^https?:\/\//.test(sourceUrl)) return null;
+  // The server already keeps to the chains' own sites; a price from anywhere else is refused here too.
+  const official = officialStoreOf(sourceUrl);
+  if (official === null) return null;
   return {
-    store,
+    store: official.name,
     name,
     price,
     packQty: typeof packQty === 'number' && Number.isInteger(packQty) && packQty >= 1 ? packQty : 1,
@@ -113,6 +117,15 @@ export function parseFoundOffers(payload: unknown): FoundOffer[] {
     const offer = toFoundOffer(entry);
     return offer ? [offer] : [];
   });
+}
+
+/**
+ * Saved offers whose price came from the web but not from a chain's own Saudi site:
+ * another country's branch, or an aggregator. Offers typed by hand or read off a
+ * flyer have no web source and are never in this list.
+ */
+export function offersFromElsewhere(offers: readonly Offer[]): Offer[] {
+  return offers.filter((offer) => offer.sourceUrl !== null && officialStoreOf(offer.sourceUrl) === null);
 }
 
 export interface TripPick {

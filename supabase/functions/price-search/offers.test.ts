@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { parseFoundOffers } from '../../../src/domain/offers';
-import { keepSourcedOffers, type ReportedOffer } from './offers';
+import { keepSourcedOffers, officialStoreOf, type ReportedOffer } from './offers';
 
 function reported(overrides: Partial<ReportedOffer>): ReportedOffer {
   return {
@@ -11,20 +11,55 @@ function reported(overrides: Partial<ReportedOffer>): ReportedOffer {
     packQty: 1,
     kind: 'weekly',
     validUntil: '2026-11-17',
-    sourceUrl: 'https://www.example-offers.test/riyadh/rice',
+    sourceUrl: 'https://www.panda.sa/ar/offers/rice',
+    currency: 'SAR',
     ...overrides,
   };
 }
 
-describe('keepSourcedOffers', () => {
-  const seen = ['https://example-offers.test/riyadh/deals?page=2'];
+describe('official sources', () => {
+  test('knows each chain by its own Saudi site', () => {
+    expect(officialStoreOf('https://www.carrefourksa.com/mafsau/ar/c/F1')).toBe('كارفور');
+    expect(officialStoreOf('https://www.othaimmarkets.com/ar/offers')).toBe('العثيم');
+    expect(officialStoreOf('https://shop.danube.sa/riyadh')).toBe('الدانوب');
+    expect(officialStoreOf('https://gcc.luluhypermarket.com/ar-sa/grocery')).toBe('لولو');
+  });
 
-  test('keeps an offer whose source site was returned by the search', () => {
+  test('refuses aggregators, other countries and look-alike addresses', () => {
+    expect(officialStoreOf('https://d4donline.com/ar/saudi-arabia/riyadh/offers')).toBeNull();
+    expect(officialStoreOf('https://www.carrefouregypt.com/mafegy/ar')).toBeNull();
+    expect(officialStoreOf('https://gcc.luluhypermarket.com/en-ae/grocery')).toBeNull();
+    expect(officialStoreOf('https://panda.sa.evil.example/offers')).toBeNull();
+    expect(officialStoreOf('javascript:alert(1)')).toBeNull();
+  });
+});
+
+describe('keepSourcedOffers', () => {
+  const seen = ['https://panda.sa/ar/offers?page=2', 'https://www.carrefouregypt.com/mafegy/ar/rice'];
+
+  test('keeps an offer found on a chain own site that the search returned', () => {
     expect(keepSourcedOffers([reported({})], seen)).toHaveLength(1);
   });
 
+  test('names the shop after the site the price was on', () => {
+    const mislabelled = reported({ store: 'هايبر ماركت' });
+
+    expect(keepSourcedOffers([mislabelled], seen)[0].store).toBe('بنده');
+  });
+
+  test('drops a price from another country shop even when the search returned it', () => {
+    const egyptian = reported({ sourceUrl: 'https://www.carrefouregypt.com/mafegy/ar/rice', currency: 'EGP' });
+    const egyptianInRiyals = reported({ sourceUrl: 'https://www.carrefouregypt.com/mafegy/ar/rice' });
+
+    expect(keepSourcedOffers([egyptian, egyptianInRiyals], seen)).toEqual([]);
+  });
+
+  test('drops a price that is not in riyals', () => {
+    expect(keepSourcedOffers([reported({ currency: 'other' })], seen)).toEqual([]);
+  });
+
   test('drops an offer attributed to a site the search never returned', () => {
-    const invented = reported({ sourceUrl: 'https://made-up.test/rice' });
+    const invented = reported({ sourceUrl: 'https://www.danube.sa/rice' });
 
     expect(keepSourcedOffers([invented], seen)).toEqual([]);
   });

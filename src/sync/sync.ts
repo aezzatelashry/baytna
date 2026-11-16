@@ -130,6 +130,7 @@ const FAMILY_ERRORS: Record<string, string> = {
   'google sign-in required': 'ادخل بحساب جوجل الأول.',
   'owner only': 'صاحب البيت بس اللي يقدر يعمل كده.',
   'owner stays': 'صاحب البيت ما ينفعش يخرج من بيته.',
+  'not a member': 'الشخص ده مش من أفراد البيت.',
 };
 
 function familyError(message: string): Error {
@@ -238,6 +239,13 @@ export async function approveMember(householdId: string, userId: string): Promis
 export async function removeMember(householdId: string, userId: string): Promise<void> {
   const { error } = await getClient().rpc('remove_member', { target_household: householdId, target_user: userId });
   if (error) throw familyError(error.message);
+}
+
+/** The owner hands the household to another approved member. This phone stops being the owner's. */
+export async function transferHousehold(householdId: string, userId: string): Promise<void> {
+  const { error } = await getClient().rpc('transfer_household', { target_household: householdId, new_owner: userId });
+  if (error) throw familyError(error.message);
+  useStore.getState().setHouseholdStatus('member', false);
 }
 
 /** A member leaves, or someone waiting takes the request back. */

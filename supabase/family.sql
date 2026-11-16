@@ -106,6 +106,22 @@ begin
    where household_id = target_household and user_id = auth.uid() and removed_at is null;
 end $$;
 
+-- The owner hands the household to another approved member, who then does the approving.
+create or replace function public.transfer_household(target_household uuid, new_owner uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.households where id = target_household and owner_id = auth.uid()) then
+    raise exception 'owner only';
+  end if;
+  if not exists (
+    select 1 from public.household_members
+    where household_id = target_household and user_id = new_owner and status = 'member' and removed_at is null
+  ) then
+    raise exception 'not a member';
+  end if;
+  update public.households set owner_id = new_owner where id = target_household;
+end $$;
+
 -- A member sets their own role and the name the other phone shows.
 create or replace function public.set_my_profile(target_household uuid, new_role text, new_name text) returns void
 language plpgsql security definer set search_path = public as $$
@@ -211,6 +227,8 @@ revoke execute on function public.set_my_name(uuid, text) from public, anon;
 revoke execute on function public.approve_member(uuid, uuid) from public, anon;
 revoke execute on function public.remove_member(uuid, uuid) from public, anon;
 revoke execute on function public.leave_household(uuid) from public, anon;
+revoke execute on function public.transfer_household(uuid, uuid) from public, anon;
+grant execute on function public.transfer_household(uuid, uuid) to authenticated;
 revoke execute on function public.set_my_profile(uuid, text, text) from public, anon;
 revoke execute on function public.order_event(uuid, date, text) from public, anon;
 revoke execute on function public.is_permanent_user() from public, anon;

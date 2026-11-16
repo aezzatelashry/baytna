@@ -1,4 +1,4 @@
-import type { CatalogEntry } from '../domain/catalog';
+import { withFamilyWords, type CatalogEntry, type FamilyWord } from '../domain/catalog';
 import type { Category } from '../domain/types';
 
 function entry(id: string, category: Category, name: string, ...aliases: string[]): CatalogEntry {
@@ -10,7 +10,7 @@ function entry(id: string, category: Category, name: string, ...aliases: string[
  * names people and shop flyers use for it. A longer name is its own product
  * ("زيت زيتون" is not "زيت"), so it gets its own entry.
  */
-export const CATALOG: readonly CatalogEntry[] = [
+export const BASE_CATALOG: readonly CatalogEntry[] = [
   entry('rice', 'pantry', 'أرز', 'رز', 'أرز بسمتي', 'رز بسمتي', 'أرز مصري', 'رز مصري'),
   entry('rice-pudding', 'dairy', 'رز بلبن', 'أرز بلبن', 'أرز باللبن', 'رز باللبن'),
   entry('pasta', 'pantry', 'مكرونة', 'معكرونة', 'مكرونه', 'باستا', 'سباغيتي', 'اسباجتي'),
@@ -80,3 +80,15 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry('fish', 'protein', 'سمك'),
   entry('fish-fillet', 'protein', 'سمك فيليه', 'فيليه سمك'),
 ];
+
+/**
+ * The dictionary in use: the built-in products plus the words the family added.
+ * It is one shared list, replaced in place when the family's words change, so every
+ * matcher that reads it sees the same products without being handed them one by one.
+ */
+export const CATALOG: CatalogEntry[] = [...BASE_CATALOG];
+
+/** Rebuilds the dictionary in use from the built-in products and the family's own words. */
+export function applyFamilyWords(words: readonly FamilyWord[]): void {
+  CATALOG.splice(0, CATALOG.length, ...withFamilyWords(BASE_CATALOG, words));
+}

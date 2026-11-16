@@ -8,7 +8,7 @@ import { Button, Chip, Field, Icon, IconButton, Row, Sheet, Tile, Txt, type Icon
 import { showToast } from '@/components/toast';
 
 import { BarcodeScanner, type ScanResult } from './list/BarcodeScanner';
-import { ItemPhoto, useItemPhoto } from './list/ItemPhoto';
+import { ItemPhoto, substituteKey, useItemPhoto } from './list/ItemPhoto';
 import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
 import { MIN_TOUCH, Radius, RowDir, Rule, Spacing, themed, usePalette } from '@/constants/theme';
@@ -294,9 +294,11 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
         {!item.bought && !isMissing && (
           <>
             <Field label="لو مش موجود، بديل مقترح (اختياري)" value={substitute} onChangeText={setSubstitute} />
+            <ItemPhoto itemName={substituteKey(item.name)} hint="صوّر البديل اللي لقيته، عشان صاحب الطلب يوافق عليه." />
             <Button label="مش لاقيه في المتجر" onPress={handleNotFound} />
           </>
         )}
+        {isMissing && <ItemPhoto itemName={substituteKey(item.name)} hint="لسه مفيش صورة للبديل." />}
         {isMissing && (
           <Button
             label="لقيته، شيل علامة مش موجود"

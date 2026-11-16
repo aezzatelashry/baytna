@@ -8,6 +8,35 @@ export interface CatalogEntry {
   readonly category: Category;
 }
 
+/** A word the family taught the dictionary: another name for a product it knows, or a product of their own. */
+export interface FamilyWord {
+  readonly word: string;
+  /** The built-in product this is another name for. Null when it is a product of the family's own. */
+  readonly productId: string | null;
+  /** Used for a product of the family's own; an added name takes its product's category. */
+  readonly kind: Category;
+}
+
+const FAMILY_PREFIX = 'family-';
+
+/**
+ * The dictionary with the family's words in it. An added name joins its product's
+ * other names; a new product gets its own entry. A word pointing at a product the
+ * dictionary no longer has becomes a product of its own rather than being lost.
+ */
+export function withFamilyWords(base: readonly CatalogEntry[], words: readonly FamilyWord[]): CatalogEntry[] {
+  const usable = words.filter((each) => each.word.trim() !== '');
+  const known = new Set(base.map((entry) => entry.id));
+  const extended = base.map((entry) => {
+    const added = usable.filter((each) => each.productId === entry.id).map((each) => each.word.trim());
+    return added.length === 0 ? entry : { ...entry, aliases: [...entry.aliases, ...added] };
+  });
+  const own = usable
+    .filter((each) => each.productId === null || !known.has(each.productId))
+    .map((each) => ({ id: `${FAMILY_PREFIX}${arabicKey(each.word)}`, name: each.word.trim(), aliases: [], category: each.kind }));
+  return [...extended, ...own];
+}
+
 const DIACRITICS = /[ً-ٰٟـ]/g;
 
 /**

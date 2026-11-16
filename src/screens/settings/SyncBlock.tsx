@@ -16,12 +16,14 @@ import {
   removeMember,
   signedInAccountName,
   syncNow,
+  transferHousehold,
   type HouseholdPerson,
 } from '@/sync/sync';
 
 const APPROVE_ICON: IconName = { ios: 'checkmark', android: 'check', web: 'check' };
 const REMOVE_ICON: IconName = { ios: 'xmark', android: 'close', web: 'close' };
 const REFRESH_ICON: IconName = { ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' };
+const OWNER_ICON: IconName = { ios: 'key.fill', android: 'key', web: 'key' };
 
 type SyncBlockProps = {
   syncError: string;
@@ -156,6 +158,8 @@ function People({ household }: PeopleProps) {
   const styles = useStyles();
   const [people, setPeople] = useState<readonly HouseholdPerson[]>([]);
   const [problem, setProblem] = useState('');
+  /** The member the owner is about to hand the household to, while the question is on screen. */
+  const [handingTo, setHandingTo] = useState<HouseholdPerson | null>(null);
   const isOwner = household.isOwner === true;
 
   const load = useCallback(async (): Promise<void> => {
@@ -229,15 +233,35 @@ function People({ household }: PeopleProps) {
             {person.isMe ? ' (إنت)' : ''}
           </Txt>
           {isOwner && !person.isMe && (
-            <IconButton
-              icon={REMOVE_ICON}
-              label={`شيل ${nameOf(person)} من البيت`}
-              tone="danger"
-              onPress={() => void act(() => removeMember(household.id, person.userId), `${nameOf(person)} اتشال من البيت`)}
-            />
+            <>
+              <IconButton icon={OWNER_ICON} label={`خلّي ${nameOf(person)} صاحب البيت`} onPress={() => setHandingTo(person)} />
+              <IconButton
+                icon={REMOVE_ICON}
+                label={`شيل ${nameOf(person)} من البيت`}
+                tone="danger"
+                onPress={() => void act(() => removeMember(household.id, person.userId), `${nameOf(person)} اتشال من البيت`)}
+              />
+            </>
           )}
         </View>
       ))}
+      {handingTo !== null && (
+        <View style={styles.confirm}>
+          <Txt>{`${nameOf(handingTo)} هيبقى صاحب البيت وهو اللي يوافق على الأعضاء، وإنت تفضل عضو. متأكد؟`}</Txt>
+          <View style={styles.row}>
+            <Button
+              kind="primary"
+              label="أيوه، انقل البيت"
+              onPress={() => {
+                const target = handingTo;
+                setHandingTo(null);
+                void act(() => transferHousehold(household.id, target.userId), `${nameOf(target)} بقى صاحب البيت`);
+              }}
+            />
+            <Button label="لأ" onPress={() => setHandingTo(null)} />
+          </View>
+        </View>
+      )}
       {isOwner && waiting.length === 0 && <Txt kind="label">مفيش طلبات انضمام مستنية.</Txt>}
       {problem !== '' && <Txt kind="label">{problem}</Txt>}
     </View>
@@ -248,6 +272,7 @@ const useStyles = themed((c) => ({
   block: { gap: Spacing.three },
   inline: { flexDirection: RowDir, gap: Spacing.two, alignItems: 'flex-end' },
   people: { gap: Spacing.one },
+  confirm: { gap: Spacing.two, paddingVertical: Spacing.two },
   row: { flexDirection: RowDir, alignItems: 'center', gap: Spacing.two },
   grow: { flex: 1 },
   person: {

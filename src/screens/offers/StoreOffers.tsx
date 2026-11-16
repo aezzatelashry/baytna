@@ -105,19 +105,19 @@ export function StoreOffers({ items, offers }: StoreOffersProps) {
           </Txt>
         </>
       )}
-      <Txt kind="strong">منشورات الأسبوع</Txt>
-      <Txt kind="label">افتح منشور المتجر، خد سكرين شوت للصفحة، وارجع اختاره من البطاقة اللي تحت.</Txt>
+      <Txt kind="strong">المواقع الرسمية للمتاجر</Txt>
+      <Txt kind="label">افتح موقع المتجر، خد سكرين شوت لصفحة العروض، وارجع اختاره من البطاقة اللي تحت.</Txt>
       {RIYADH_STORES.map((store) => (
         <View key={store.id} style={styles.store}>
           <Txt style={styles.grow}>{store.name}</Txt>
           <IconButton
             icon={OPEN_ICON}
-            label={`افتح منشورات ${store.name}`}
-            onPress={() => void Linking.openURL(store.flyersUrl).catch(() => showToast('الرابط ما اتفتحش'))}
+            label={`افتح موقع ${store.name}`}
+            onPress={() => void Linking.openURL(store.siteUrl).catch(() => showToast('الرابط ما اتفتحش'))}
           />
         </View>
       ))}
-      <Txt kind="label">المنشورات بتتفتح من موقع D4D Online.</Txt>
+      <Txt kind="label">الأسعار بتيجي من مواقع المتاجر دي نفسها بس، في السعودية وبالريال.</Txt>
     </Tile>
   );
 }

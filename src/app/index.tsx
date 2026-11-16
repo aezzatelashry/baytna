@@ -151,6 +151,13 @@ export default function Home() {
     if (isHydrated) fillFunds();
   }, [isHydrated, fillFunds]);
 
+  // Prices saved from another country's shop or an aggregator are cleared out, and the family is told.
+  useEffect(() => {
+    if (!isHydrated) return;
+    const removed = useStore.getState().removeOffersFromElsewhere();
+    if (removed > 0) showToast(`اتمسح ${removed} عرض مش من المواقع الرسمية للمتاجر`);
+  }, [isHydrated]);
+
   // Until the saved state is read back, nothing is shown: a returning family must not see the welcome flash by.
   if (!isHydrated) return <SafeAreaView style={styles.root} />;
   if (!hasOnboarded) {
