@@ -7,6 +7,7 @@ import { formatSar } from '@/domain/budget';
 import { availableEvents, ROLES, summarizeTrip, type OrderEvent, type OrderStatus } from '@/domain/orders';
 import type { ListItem } from '@/domain/types';
 import { currentWeekStart, useStore } from '@/store/store';
+import { sendOrderEvent } from '@/sync/sync';
 
 const STATUS_TITLES: Record<OrderStatus, string> = {
   draft: 'القائمة لسه بتتجهّز',
@@ -36,7 +37,6 @@ export function OrderBanner({ items }: OrderBannerProps) {
   const weekStartsOn = useStore((state) => state.weekStartsOn);
   const orders = useStore((state) => state.orders);
   const isLinked = useStore((state) => state.household !== null);
-  const applyOrderEvent = useStore((state) => state.applyOrderEvent);
   const styles = useStyles();
 
   const status = orders[currentWeekStart(weekStartsOn)] ?? 'draft';
@@ -50,7 +50,9 @@ export function OrderBanner({ items }: OrderBannerProps) {
   if (items.length === 0 || (status === 'draft' && events.length === 0)) return null;
 
   const handle = (event: OrderEvent): void => {
-    if (!applyOrderEvent(event)) showToast('الخطوة دي مش متاحة لدورك دلوقتي');
+    void sendOrderEvent(event).then((isMoved) => {
+      if (!isMoved) showToast('الخطوة دي مش متاحة دلوقتي. يمكن الطرف التاني سبق.');
+    });
   };
 
   return (

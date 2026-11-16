@@ -184,6 +184,8 @@ interface State {
   readonly role: Role;
   /** Each week's list status, keyed by the week's first day. Local until the family sync lands. */
   readonly orders: Readonly<Record<string, OrderStatus>>;
+  /** The role and name last sent to the household, as "role|name". Empty until the first send. */
+  readonly profilePushed: string;
   /** Meals the family added themselves. Local to this phone for now. */
   readonly customMeals: readonly Meal[];
   readonly favorites: readonly string[];
@@ -268,6 +270,9 @@ interface Actions {
   setRole: (role: Role) => void;
   /** Moves this week's list along (send, start, finish...). False when this role may not do it now. */
   applyOrderEvent: (event: OrderEvent) => boolean;
+  /** Where each week's order stands according to the household, by week start. */
+  setOrderStatuses: (statuses: Readonly<Record<string, OrderStatus>>) => void;
+  setProfilePushed: (profile: string) => void;
   markNotFound: (id: string, substitute: string | null) => void;
   clearNotFound: (id: string) => void;
   setBought: (id: string, bought: boolean, paidPrice: number | null) => void;
@@ -398,6 +403,7 @@ export const useStore = create<Store>()(
       workBudget: 0,
       role: 'requester',
       orders: {},
+      profilePushed: '',
       customMeals: [],
       favorites: [],
       mealVideos: {},
@@ -579,6 +585,8 @@ export const useStore = create<Store>()(
         })),
 
       setRole: (role) => set({ role }),
+      setOrderStatuses: (statuses) => set((state) => ({ orders: { ...state.orders, ...statuses } })),
+      setProfilePushed: (profilePushed) => set({ profilePushed }),
       applyOrderEvent: (event) => {
         const state = get();
         const weekStart = currentWeekStart(state.weekStartsOn);
@@ -784,6 +792,7 @@ export const useStore = create<Store>()(
           photosPulledAt: '',
           offersPushedAt: '',
           offersPulledAt: '',
+          profilePushed: '',
         }),
       setHouseholdStatus: (status, isOwner) =>
         set((state) => (state.household ? { household: { ...state.household, status, isOwner } } : state)),

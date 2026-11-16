@@ -51,6 +51,8 @@ function useHouseholdSync(): string {
         state.items === previous.items &&
         state.plan === previous.plan &&
         state.offerStamps === previous.offerStamps &&
+        state.role === previous.role &&
+        state.myName === previous.myName &&
         state.photoStamps === previous.photoStamps;
       if (isSame) return;
       clearTimeout(timer);

@@ -4,11 +4,13 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { parseAssistantReply, type AssistantReply } from '@/domain/assistant';
 import { parseFlyer, type FlyerReading } from '@/domain/flyer';
 import { parseFoundOffers, type FoundOffer } from '@/domain/offers';
+import type { OrderEvent } from '@/domain/orders';
 import { parsePlaces, type NearbyPlace } from '@/domain/places';
 import type { Category, ListItem, MealSlot, PlanEntry } from '@/domain/types';
 import { useStore, type HouseholdLink } from '@/store/store';
 
 import { syncOffers } from './offer-sync';
+import { moveOrder, syncOrders } from './order-sync';
 import { syncPhotos } from './photo-sync';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -247,6 +249,7 @@ interface ItemRow {
   id: string; household_id: string; week_start: string; name: string; qty: number; unit: string;
   category: string; est_price: number | null; paid_price: number | null; bought: boolean;
   meal_id: string | null; added_by: string; deleted: boolean; updated_at: string; server_updated_at?: string;
+  urgent?: boolean; not_found?: boolean; substitute?: string | null;
 }
 
 interface PlanRow {
@@ -260,6 +263,7 @@ function itemToRow(item: ListItem, householdId: string): ItemRow {
     unit: item.unit, category: item.category, est_price: item.estPrice, paid_price: item.paidPrice,
     bought: item.bought, meal_id: item.mealId, added_by: item.addedBy, deleted: item.deleted,
     updated_at: item.updatedAt,
+    urgent: item.urgent === true, not_found: item.notFound === true, substitute: item.substitute ?? null,
   };
 }
 
@@ -270,6 +274,7 @@ function rowToItem(row: ItemRow): ListItem {
     paidPrice: row.paid_price === null ? null : Number(row.paid_price), bought: row.bought,
     mealId: row.meal_id, addedBy: row.added_by, deleted: row.deleted,
     updatedAt: new Date(row.updated_at).toISOString(),
+    urgent: row.urgent === true, notFound: row.not_found === true, substitute: row.substitute ?? null,
   };
 }
 
@@ -346,6 +351,7 @@ async function runSync(): Promise<void> {
   useStore.getState().mergeRemote(itemRows.map(rowToItem), planRows.map(rowToPlan), pulledAt);
 
   await syncOffers(supabase, householdId);
+  await syncOrders(supabase, householdId);
 
   // The list is already in step; a photo that fails to move is reported without undoing that.
   try {
@@ -353,6 +359,11 @@ async function runSync(): Promise<void> {
   } catch {
     throw new Error('القائمة اتزامنت، بس الصور ما اتزامنتش. هتتجرّب تاني لوحدها.');
   }
+}
+
+/** Moves this week's order one step, on this phone and in the household. False when the step is not open now. */
+export function sendOrderEvent(event: OrderEvent): Promise<boolean> {
+  return moveOrder(isSyncConfigured() ? getClient() : null, event);
 }
 
 /** Live updates from the other phone. Returns an unsubscribe function. */
@@ -368,6 +379,7 @@ export function subscribeToHousehold(householdId: string, onError: (message: str
     .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_entries', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'photos', filter }, pull)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'offers', filter }, pull)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter }, pull)
     .subscribe();
   return () => {
     void supabase.removeChannel(channel);
