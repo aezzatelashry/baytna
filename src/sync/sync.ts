@@ -43,6 +43,20 @@ export async function signInWithGoogleToken(idToken: string): Promise<string> {
   return typeof name === 'string' ? name : '';
 }
 
+/**
+ * The name on the Google account this phone is still signed in with, or null when
+ * there is no session or only an anonymous one. The session itself is kept on the
+ * phone, so this is what a screen asks after the app is reopened.
+ */
+export async function signedInAccountName(): Promise<string | null> {
+  if (!isSyncConfigured()) return null;
+  const { data } = await getClient().auth.getSession();
+  const user = data.session?.user;
+  if (!user || user.is_anonymous === true) return null;
+  const name: unknown = user.user_metadata?.full_name;
+  return typeof name === 'string' ? name : '';
+}
+
 export async function signOut(): Promise<void> {
   const { error } = await getClient().auth.signOut();
   if (error) throw new Error('تسجيل الخروج ما اشتغلش. جرّب تاني.');

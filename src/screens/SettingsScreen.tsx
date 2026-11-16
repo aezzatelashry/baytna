@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Chip, Field, IconButton, Sheet, Tile, Txt, type IconName } from '@/components/kit';
@@ -9,7 +9,7 @@ import { ROLE_LABELS, ROLES } from '@/domain/orders';
 import { COMMON_AVOIDS, DIET_TAG_LABELS, type DietTag, type Member, type ThemeMode } from '@/domain/types';
 import { useStore } from '@/store/store';
 import { isGoogleConfigured, signInWithGoogle } from '@/sync/google-auth';
-import { createHousehold, isSyncConfigured, joinHousehold, syncNow } from '@/sync/sync';
+import { createHousehold, isSyncConfigured, joinHousehold, signedInAccountName, syncNow } from '@/sync/sync';
 
 const DIET_TAGS = Object.keys(DIET_TAG_LABELS) as DietTag[];
 
@@ -210,6 +210,21 @@ function SyncBlock({ syncError }: SyncProps) {
   const [error, setError] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [accountName, setAccountName] = useState('');
+
+  // The session outlives the screen: ask for it again whenever the screen opens.
+  useEffect(() => {
+    let isCurrent = true;
+    signedInAccountName()
+      .then((name) => {
+        if (!isCurrent || name === null) return;
+        setAccountName(name);
+        setIsSignedIn(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const run = async (link: () => ReturnType<typeof createHousehold>): Promise<void> => {
     setIsBusy(true);
