@@ -18,6 +18,30 @@ export function knownPrice(book: PriceBook, name: string): number | null {
   return newest ? newest[1].price : null;
 }
 
+export interface Alternative {
+  /** The name the family bought it under, as their price book holds it. */
+  readonly name: string;
+  readonly price: number;
+  /** What it saves against the price expected for the item on the list, in SAR. */
+  readonly saving: number;
+}
+
+/**
+ * The same product bought before under another name (another brand or size) for less
+ * than this item is expected to cost. Null when nothing cheaper is on record, or when
+ * the item has no expected price to compare with.
+ */
+export function cheaperAlternative(book: PriceBook, name: string, expectedPrice: number | null): Alternative | null {
+  if (expectedPrice === null || expectedPrice <= 0) return null;
+  const wanted = normalizeName(name);
+  const cheapest = Object.entries(book)
+    .filter(([key, record]) => key !== wanted && record.price < expectedPrice && sameProduct(key, name, CATALOG))
+    .sort(([, a], [, b]) => a.price - b.price)[0];
+  if (!cheapest) return null;
+  const [alternativeName, record] = cheapest;
+  return { name: alternativeName, price: record.price, saving: Math.round((expectedPrice - record.price) * 100) / 100 };
+}
+
 export interface OfferCost {
   /** What the meal costs when each ingredient takes its running offer if that is cheaper, in SAR. */
   readonly withOffers: number;

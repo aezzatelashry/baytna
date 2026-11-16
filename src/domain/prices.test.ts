@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { knownPrice, mealCostWithOffers } from './prices';
+import { cheaperAlternative, knownPrice, mealCostWithOffers } from './prices';
 import type { Meal, Offer, PriceBook } from './types';
 
 // Test figures only.
@@ -9,6 +9,21 @@ const book: PriceBook = {
   رز: { price: 34, date: '2026-11-10' },
   زيت: { price: 20, date: '2026-11-05' },
 };
+
+describe('a cheaper alternative bought before', () => {
+  test('finds the same product under another name for less', () => {
+    expect(cheaperAlternative(book, 'أرز بسمتي', 36)).toEqual({ name: 'رز', price: 34, saving: 2 });
+  });
+
+  test('says nothing when the other name cost the same or more, or is another product', () => {
+    expect(cheaperAlternative(book, 'رز', 34)).toBeNull();
+    expect(cheaperAlternative(book, 'زيت زيتون', 50)).toBeNull();
+  });
+
+  test('needs an expected price to compare with', () => {
+    expect(cheaperAlternative(book, 'أرز بسمتي', null)).toBeNull();
+  });
+});
 
 const offer = (name: string, price: number, validUntil: string | null = null): Offer => ({
   id: name,

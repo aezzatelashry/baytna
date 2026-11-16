@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import Swipeable, { SwipeDirection, type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { Button, Chip, Field, Icon, IconButton, Row, Sheet, Tile, Txt, type IconName } from '@/components/kit';
 import { showToast } from '@/components/toast';
@@ -12,7 +13,7 @@ import { OrderBanner } from './list/OrderBanner';
 import { Pantry } from './list/Pantry';
 import { MIN_TOUCH, Radius, RowDir, Rule, Spacing, themed, usePalette } from '@/constants/theme';
 import { formatSar, parsePrice } from '@/domain/budget';
-import { knownPrice } from '@/domain/prices';
+import { cheaperAlternative, knownPrice } from '@/domain/prices';
 import { groupByStore, listMessage } from '@/domain/share-list';
 import { offerForItem, type ItemOffer } from '@/domain/offers';
 import { dayName, toDateKey } from '@/domain/week';
@@ -166,6 +167,7 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
   const [paid, setPaid] = useState(item.estPrice === null ? '' : formatSar(item.estPrice));
 
   const found = item.bought ? null : offerForItem(item.name, offers, knownPrice(priceBook, item.name), toDateKey(new Date()));
+  const alternative = item.bought ? null : cheaperAlternative(priceBook, item.name, item.estPrice);
   const quantity = item.unit === '' ? '' : `${item.qty} ${item.unit}`;
   const stateLabel = item.bought ? 'اتشترى' : 'لسه';
   const isMissing = item.notFound === true && !item.bought;
@@ -235,7 +237,12 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
           onPress={handleToggleBought}
           style={styles.checkTouch}>
           <View style={[styles.check, item.bought && styles.checkDone]}>
-            {item.bought && <Icon name={CHECK_ICON} color={palette.brandInk} size={CHECK_ICON_SIZE} />}
+            {item.bought && (
+              // The tick pops in when the item is bought. The phone's "reduce motion" setting turns it off.
+              <Animated.View entering={ZoomIn.duration(CHECK_POP_MS)}>
+                <Icon name={CHECK_ICON} color={palette.brandInk} size={CHECK_ICON_SIZE} />
+              </Animated.View>
+            )}
           </View>
         </Pressable>
         <Pressable
@@ -258,6 +265,11 @@ function ItemRow({ item, isOpen, onToggleOpen, onDone }: ItemRowProps) {
             {found !== null && (
               <Txt kind="label" tone={found.verdict === 'dearer' ? 'over' : found.verdict === 'cheaper' ? 'ok' : undefined}>
                 {offerLine(found)}
+              </Txt>
+            )}
+            {alternative !== null && (
+              <Txt kind="label" tone="ok">
+                {`اشتريتوا "${alternative.name}" قبل كده بـ ${formatSar(alternative.price)} ريال، أرخص بـ ${formatSar(alternative.saving)}.`}
               </Txt>
             )}
           </View>
@@ -342,6 +354,7 @@ const CATEGORY_ICONS: Record<Category, IconName> = {
 };
 const CHECK_SIZE = 28;
 const CHECK_ICON_SIZE = 18;
+const CHECK_POP_MS = 180;
 const PRICE_FIELD_WIDTH = 120;
 const CHECK_ICON: IconName = { ios: 'checkmark', android: 'check', web: 'check' };
 
