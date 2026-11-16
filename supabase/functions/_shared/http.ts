@@ -47,7 +47,11 @@ export function serve(name: string, handle: (request: Request) => Promise<Respon
       return await handle(request);
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError) return json({ error: 'busy' }, 429);
-      if (error instanceof Anthropic.APIError) return json({ error: 'ai_failed' }, 502);
+      if (error instanceof Anthropic.APIError) {
+        // Status and the API's own message only; the key is never part of either.
+        console.error(`${name} ai error`, error.status, error.message);
+        return json({ error: 'ai_failed' }, 502);
+      }
       // The detail stays in the function log; the phone gets a generic message.
       console.error(`${name} failed`, error instanceof Error ? error.message : error);
       return json({ error: 'server_error' }, 500);
