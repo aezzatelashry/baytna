@@ -51,7 +51,7 @@ create index plan_entries_pull on public.plan_entries (household_id, server_upda
 
 -- The pull cursor uses the server clock, so phone clock drift cannot hide rows.
 create function public.touch_server_updated_at() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   new.server_updated_at := now();
   return new;
@@ -99,6 +99,8 @@ begin
   return target;
 end $$;
 
+revoke execute on function public.is_member(uuid) from public, anon;
+grant execute on function public.is_member(uuid) to authenticated;
 revoke execute on function public.create_household() from public, anon;
 revoke execute on function public.join_household(text) from public, anon;
 grant execute on function public.create_household() to authenticated;
