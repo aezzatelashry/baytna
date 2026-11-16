@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { LockGate } from '@/components/LockGate';
 import { usePalette } from '@/constants/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -34,7 +35,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StatusBar style={palette.isDark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.paper } }} />
+      <LockGate>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.paper } }} />
+      </LockGate>
     </GestureHandlerRootView>
   );
 }

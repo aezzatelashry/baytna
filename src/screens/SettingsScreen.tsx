@@ -8,6 +8,7 @@ import { formatSar, parsePrice } from '@/domain/budget';
 import { ROLE_LABELS, ROLES } from '@/domain/orders';
 import { COMMON_AVOIDS, DIET_TAG_LABELS, type DietTag, type Member, type ThemeMode } from '@/domain/types';
 import { useStore } from '@/store/store';
+import { LockBlock } from '@/screens/settings/LockBlock';
 import { isGoogleConfigured, signInWithGoogle } from '@/sync/google-auth';
 import { createHousehold, isSyncConfigured, joinHousehold, signedInAccountName, syncNow } from '@/sync/sync';
 
@@ -109,6 +110,8 @@ export function SettingsScreen({ syncError, onBack }: SettingsScreenProps) {
           ))}
         </View>
       </View>
+
+      <LockBlock />
 
       <View style={styles.block}>
         <Txt kind="title">أفراد البيت والممنوعات</Txt>

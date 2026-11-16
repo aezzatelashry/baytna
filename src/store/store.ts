@@ -100,6 +100,8 @@ interface State {
   readonly themeMode: ThemeMode;
   /** Local to this phone: the colour family the app wears. */
   readonly colorTheme: ColorTheme;
+  /** When on, the app asks for the phone's fingerprint or face before it opens. */
+  readonly appLock: boolean;
   /** Fresh things bought lately, so the ones about to go off are eaten first. */
   readonly fresh: readonly FreshItem[];
   /** The family's own photo of a meal, as a file address keyed by meal id. Local to this phone. */
@@ -166,6 +168,7 @@ interface Actions {
   setMyName: (name: string) => void;
   setThemeMode: (mode: ThemeMode) => void;
   setColorTheme: (theme: ColorTheme) => void;
+  setAppLock: (isOn: boolean) => void;
   /** It was eaten or thrown away: off the fresh shelf. */
   removeFresh: (id: string) => void;
   restoreFresh: (item: FreshItem) => void;
@@ -303,6 +306,7 @@ export const useStore = create<Store>()(
       myName: '',
       themeMode: 'auto',
       colorTheme: DEFAULT_COLOR_THEME,
+      appLock: false,
       fresh: [],
       mealPhotos: {},
       hasOnboarded: false,
@@ -346,6 +350,7 @@ export const useStore = create<Store>()(
       setMyName: (myName) => set({ myName: myName.trim() }),
       setThemeMode: (themeMode) => set({ themeMode }),
       setColorTheme: (colorTheme) => set({ colorTheme }),
+      setAppLock: (appLock) => set({ appLock }),
       removeFresh: (id) => set((state) => ({ fresh: state.fresh.filter((item) => item.id !== id) })),
       restoreFresh: (item) =>
         set((state) => (state.fresh.some((kept) => kept.id === item.id) ? state : { fresh: [...state.fresh, item] })),
